@@ -1,9 +1,10 @@
-import { createRegisterUserController } from "./controllers/auth-controller";
+import { createLoginUserController, createRegisterUserController } from "./controllers/auth-controller";
 import { createApp } from "./app";
 import { readConfig } from "./config/env";
 import { sequelize } from "./database/sequelize";
 import { User } from "./models/user";
 import { UserRepository } from "./repositories/user-repository";
+import { LoginUserService } from "./services/login-user-service";
 import { RegisterUserService } from "./services/register-user-service";
 
 // Carga y valida la configuración antes de intentar iniciar el servidor.
@@ -15,10 +16,14 @@ async function startServer(): Promise<void> {
     // Confirma la conexión a PostgreSQL antes de aceptar solicitudes HTTP.
     await sequelize.authenticate();
 
-    // Conecta modelo, repositorio y servicio para habilitar el registro HTTP.
+    // Conecta modelo, repositorio y servicios para habilitar registro e inicio de sesión.
     const userRepository = new UserRepository(User);
     const registerUserService = new RegisterUserService(userRepository);
-    const app = createApp(createRegisterUserController(registerUserService));
+    const loginUserService = new LoginUserService(userRepository, config);
+    const app = createApp({
+      register: createRegisterUserController(registerUserService),
+      login: createLoginUserController(loginUserService),
+    });
 
     // Inicia el servidor usando el puerto centralizado en el módulo de configuración.
     const server = app.listen(config.port, () => {

@@ -2,10 +2,10 @@ import express from "express";
 import type { RequestHandler } from "express";
 import errorHandler from "./middleware/error-handler";
 import notFoundHandler from "./middleware/not-found-handler";
-import { createAuthRouter } from "./routes/auth-routes";
+import { createAuthRouter, type AuthRouteHandlers } from "./routes/auth-routes";
 
-// Crea una aplicación con las rutas disponibles y permite inyectar el controlador de registro.
-export function createApp(registerUserController?: RequestHandler) {
+// Crea una aplicación con las rutas disponibles y los controladores de autenticación inyectados.
+export function createApp(authHandlers?: AuthRouteHandlers) {
   const app = express();
 
   // Convierte automáticamente los cuerpos JSON de las solicitudes en objetos de JavaScript.
@@ -16,9 +16,9 @@ export function createApp(registerUserController?: RequestHandler) {
     response.status(200).json({ status: "ok" });
   });
 
-  // Agrega las rutas de autenticación cuando el punto de entrada inyecta el controlador real.
-  if (registerUserController) {
-    app.use("/api/auth", createAuthRouter(registerUserController));
+  // Agrega las rutas de autenticación que el punto de entrada haya configurado.
+  if (authHandlers) {
+    app.use("/api/auth", createAuthRouter(authHandlers));
   }
 
   // Convierte rutas no registradas en HttpError antes de que se ejecute el manejador global.
