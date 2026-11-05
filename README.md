@@ -146,4 +146,11 @@ Proyectos, tableros múltiples, equipos, comentarios, adjuntos, subtareas, sprin
 
 ## Instalación y ejecución
 
-Todavía no disponibles: el proyecto no cuenta con `package.json`, configuración de TypeScript, scripts, dependencias ni código ejecutable. Esta sección se completará cuando se inicialice la aplicación y se verifiquen los comandos reales.
+El `package.json` ya define las dependencias previstas y los scripts para desarrollo, compilación, ejecución y pruebas. La aplicación todavía no tiene `src/server.ts` ni `tsconfig.json`, así que esos scripts quedarán listos para usarse cuando se cree la estructura inicial del backend.
+
+```bash
+npm install
+npm run dev
+```
+
+`npm run build` compilará la aplicación y `npm start` ejecutará el resultado compilado. `npm test` usa el ejecutor de pruebas integrado de Node.js. Hasta implementar el backend y agregar pruebas, estos comandos todavía no verifican funcionalidad de la API.
