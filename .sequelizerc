@@ -1,0 +1,7 @@
+const path = require("node:path");
+
+// Indica a Sequelize CLI dónde encontrar la configuración y las migraciones del proyecto.
+module.exports = {
+  config: path.resolve("src/database/sequelize-cli-config.cjs"),
+  "migrations-path": path.resolve("src/database/migrations"),
+};

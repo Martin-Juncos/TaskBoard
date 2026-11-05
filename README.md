@@ -2,7 +2,7 @@
 
 API REST para gestionar un tablero Kanban de desarrollo de software. Los tickets representan trabajo técnico y avanzan por estados hasta completarse. El proyecto se realiza como trabajo práctico integrador.
 
-> **Estado:** implementación en progreso. Ya existe la base Express/TypeScript, la ruta `GET /health`, configuración centralizada, manejo JSON de errores y pruebas iniciales. La conexión a PostgreSQL, autenticación, usuarios y operaciones de tickets todavía están pendientes; los endpoints y reglas descritos abajo siguen siendo el alcance acordado para el MVP.
+> **Estado:** implementación en progreso. Ya existe la base Express/TypeScript, la ruta `GET /health`, manejo JSON de errores, pruebas iniciales, conexión a PostgreSQL y migraciones para usuarios y tickets. La autenticación y las operaciones de tickets todavía están pendientes; los endpoints y reglas descritos abajo siguen siendo el alcance acordado para el MVP.
 
 ## Objetivo
 
@@ -137,7 +137,7 @@ Proyectos, tableros múltiples, equipos, comentarios, adjuntos, subtareas, sprin
 ## Plan de implementación
 
 1. Inicializar Node.js/TypeScript, configuración de entorno y base Express; agregar health check, manejo de errores y pruebas iniciales. **Completado.**
-2. Conectar PostgreSQL con Sequelize y preparar migraciones.
+2. Conectar PostgreSQL con Sequelize y preparar migraciones. **Completado.**
 3. Implementar modelos y relación entre usuarios y tickets.
 4. Implementar registro, login, bcrypt, JWT y permisos por rol.
 5. Implementar CRUD de tickets, validaciones, alerta calculada, búsqueda y filtros.
@@ -146,11 +146,13 @@ Proyectos, tableros múltiples, equipos, comentarios, adjuntos, subtareas, sprin
 
 ## Instalación y ejecución
 
-El proyecto ya tiene `src/server.ts`, `tsconfig.json` y pruebas en `tests/`. Antes de iniciar, copiá `.env.example` a `.env` y completá `DATABASE_URL`, `JWT_SECRET` y `JWT_EXPIRES_IN`. `PORT` es opcional y, si no se configura, el servidor usa el puerto `3000`. No subas el archivo `.env` al repositorio.
+El proyecto ya tiene `src/server.ts`, `tsconfig.json` y pruebas en `tests/`. Antes de iniciar, copiá `.env.example` a `.env` y completá `DATABASE_URL`, `DATABASE_URL_TEST`, `JWT_SECRET` y `JWT_EXPIRES_IN`. `PORT` es opcional y, si no se configura, el servidor usa el puerto `3000`. No subas el archivo `.env` al repositorio.
 
 ```bash
 npm install
+npm run db:check
+npm run db:migrate
 npm run dev
 ```
 
-`npm run dev` inicia el servidor en modo desarrollo. `npm run build` compila TypeScript y `npm start` ejecuta el resultado compilado. `npm test` ejecuta las pruebas TypeScript con el runner integrado de Node.js mediante `tsx`; actualmente cubren la ruta de salud, configuración y respuestas de error. La base de datos, autenticación y operaciones de tickets todavía no están implementadas.
+`npm run dev` espera la conexión a PostgreSQL antes de iniciar el servidor. `npm run db:migrate` aplica las migraciones pendientes en `taskboard`; `npm run db:migrate:undo` revierte la última migración. Para la base aislada de pruebas usá `npm run db:test:migrate` y `npm run db:test:migrate:undo`. `npm run build` compila TypeScript, `npm start` ejecuta el resultado compilado y `npm test` corre las pruebas automatizadas.

@@ -13,7 +13,11 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "test": "tsx --test",
-    "db:check": "tsx src/database/check-connection.ts"
+    "db:check": "tsx src/database/check-connection.ts",
+    "db:migrate": "sequelize-cli db:migrate --env development",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo --env development",
+    "db:test:migrate": "sequelize-cli db:migrate --env test",
+    "db:test:migrate:undo": "sequelize-cli db:migrate:undo --env test"
   },
   "repository": {
     "type": "git",
@@ -39,6 +43,7 @@
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^24.0.0",
+    "sequelize-cli": "^6.6.3",
     "tsx": "^4.23.0",
     "typescript": "^5.9.0"
   },
