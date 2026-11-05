@@ -1,8 +1,7 @@
-import "dotenv/config";
 import app from "./app";
+import { config } from "./config/env";
 
-const port = Number(process.env.PORT) || 3000;
-
-app.listen(port, () => {
-  console.log(`Servidor escuchando en el puerto ${port}`);
+// Inicia el servidor usando el puerto centralizado en el módulo de configuración.
+app.listen(config.port, () => {
+  console.log(`Servidor escuchando en el puerto ${config.port}`);
 });
