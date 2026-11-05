@@ -37,6 +37,7 @@ test("responde el estado de salud de la API", async () => {
   assert.deepEqual(await response.json(), { status: "ok" });
 });
 
+// Comprueba que JSON válido se procesa y una ruta inexistente recibe el error 404 acordado.
 test("acepta JSON válido y devuelve 404 para una ruta aún no implementada", async () => {
   const response = await fetch(`${baseUrl}/api/no-implementada`, {
     method: "POST",
@@ -45,6 +46,13 @@ test("acepta JSON válido y devuelve 404 para una ruta aún no implementada", as
   });
 
   assert.equal(response.status, 404);
+  assert.match(response.headers.get("content-type") ?? "", /^application\/json\b/);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: "RUTA_NO_ENCONTRADA",
+      message: "La ruta POST /api/no-implementada no existe.",
+    },
+  });
 });
 
 // Comprueba que el middleware global traduce el JSON inválido al formato de error acordado.
