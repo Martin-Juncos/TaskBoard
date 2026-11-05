@@ -28,6 +28,15 @@ after(async () => {
   });
 });
 
+// Comprueba el contrato completo del endpoint de salud: código, formato y contenido.
+test("responde el estado de salud de la API", async () => {
+  const response = await fetch(`${baseUrl}/health`);
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^application\/json\b/);
+  assert.deepEqual(await response.json(), { status: "ok" });
+});
+
 test("acepta JSON válido y devuelve 404 para una ruta aún no implementada", async () => {
   const response = await fetch(`${baseUrl}/api/no-implementada`, {
     method: "POST",
