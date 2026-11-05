@@ -3,6 +3,7 @@ import { createApp } from "./app";
 import { readConfig } from "./config/env";
 import { sequelize } from "./database/sequelize";
 import { User } from "./models/user";
+import "./models/ticket";
 import { UserRepository } from "./repositories/user-repository";
 import { createAuthenticationMiddleware } from "./middleware/authentication";
 import { createRoleAuthorizationMiddleware } from "./middleware/authorize-role";
