@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, test } from "node:test";
-import app from "../src/app";
+import { createApp } from "../src/app";
 
+// Crea una aplicación sin dependencias de autenticación para las pruebas generales.
+const app = createApp();
 let baseUrl: string;
 let server: ReturnType<typeof app.listen>;
 
