@@ -1,4 +1,5 @@
 import express from "express";
+import errorHandler from "./middleware/error-handler";
 
 const app = express();
 
@@ -9,5 +10,8 @@ app.use(express.json());
 app.get("/health", (_request, response) => {
   response.status(200).json({ status: "ok" });
 });
+
+// Registra el manejador al final para que reciba errores de las rutas y middlewares anteriores.
+app.use(errorHandler);
 
 export default app;
