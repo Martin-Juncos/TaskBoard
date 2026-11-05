@@ -1,7 +1,7 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
 import type { AppConfig } from "../config/env";
 import { HttpError } from "../errors/http-error";
-import { USER_ROLES, type UserRole } from "../types/user-role";
+import { isUserRole, type UserRole } from "../types/user-role";
 
 export interface AccessTokenClaims {
   userId: number;
@@ -49,10 +49,6 @@ export function verifyAccessToken(token: string, settings: JwtSettings): AccessT
 }
 
 // Comprueba en tiempo de ejecución que el rol del token sea uno de los dos roles permitidos.
-function isUserRole(role: unknown): role is UserRole {
-  return typeof role === "string" && USER_ROLES.includes(role as UserRole);
-}
-
 // Usa una respuesta uniforme para cualquier token inválido o vencido.
 function invalidTokenError(): HttpError {
   return new HttpError(401, "TOKEN_INVALIDO", "El token no es válido o expiró.");

@@ -93,6 +93,21 @@ test("rechaza un token vencido", async () => {
   assert.equal(body.error.code, "TOKEN_INVALIDO");
 });
 
+// Rechaza un token cuya firma no corresponde al secreto configurado.
+test("rechaza un token con firma inválida", async () => {
+  const token = signAccessToken({ userId: 7, role: "admin" }, {
+    ...testSettings,
+    jwtSecret: "otro-secreto-distinto",
+  });
+  const response = await fetch(`${baseUrl}/privado`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = (await response.json()) as { error: { code: string } };
+
+  assert.equal(response.status, 401);
+  assert.equal(body.error.code, "TOKEN_INVALIDO");
+});
+
 // Rechaza un token válido en firma si el usuario fue eliminado de la base.
 test("rechaza tokens de usuarios que ya no existen", async () => {
   const token = signAccessToken({ userId: 99, role: "developer" }, testSettings);
