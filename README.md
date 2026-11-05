@@ -2,7 +2,7 @@
 
 API REST para gestionar un tablero Kanban de desarrollo de software. Los tickets representan trabajo técnico y avanzan por estados hasta completarse. El proyecto se realiza como trabajo práctico integrador.
 
-> **Estado:** planificación inicial. Este repositorio todavía no contiene la aplicación. La estructura, los endpoints y las reglas descritos abajo son el alcance acordado para el MVP; no implican que ya estén implementados.
+> **Estado:** implementación en progreso. Ya existe la base Express/TypeScript, la ruta `GET /health`, configuración centralizada, manejo JSON de errores y pruebas iniciales. La conexión a PostgreSQL, autenticación, usuarios y operaciones de tickets todavía están pendientes; los endpoints y reglas descritos abajo siguen siendo el alcance acordado para el MVP.
 
 ## Objetivo
 
@@ -136,7 +136,7 @@ Proyectos, tableros múltiples, equipos, comentarios, adjuntos, subtareas, sprin
 
 ## Plan de implementación
 
-1. Inicializar Node.js/TypeScript y definir configuración de entorno.
+1. Inicializar Node.js/TypeScript, configuración de entorno y base Express; agregar health check, manejo de errores y pruebas iniciales. **Completado.**
 2. Conectar PostgreSQL con Sequelize y preparar migraciones.
 3. Implementar modelos y relación entre usuarios y tickets.
 4. Implementar registro, login, bcrypt, JWT y permisos por rol.
@@ -146,11 +146,11 @@ Proyectos, tableros múltiples, equipos, comentarios, adjuntos, subtareas, sprin
 
 ## Instalación y ejecución
 
-El `package.json` ya define las dependencias previstas y los scripts para desarrollo, compilación, ejecución y pruebas. La aplicación todavía no tiene `src/server.ts` ni `tsconfig.json`, así que esos scripts quedarán listos para usarse cuando se cree la estructura inicial del backend.
+El proyecto ya tiene `src/server.ts`, `tsconfig.json` y pruebas en `tests/`. Antes de iniciar, copiá `.env.example` a `.env` y completá `DATABASE_URL`, `JWT_SECRET` y `JWT_EXPIRES_IN`. `PORT` es opcional y, si no se configura, el servidor usa el puerto `3000`. No subas el archivo `.env` al repositorio.
 
 ```bash
 npm install
 npm run dev
 ```
 
-`npm run build` compilará la aplicación y `npm start` ejecutará el resultado compilado. `npm test` usa el ejecutor de pruebas integrado de Node.js. Hasta implementar el backend y agregar pruebas, estos comandos todavía no verifican funcionalidad de la API.
+`npm run dev` inicia el servidor en modo desarrollo. `npm run build` compila TypeScript y `npm start` ejecuta el resultado compilado. `npm test` ejecuta las pruebas TypeScript con el runner integrado de Node.js mediante `tsx`; actualmente cubren la ruta de salud, configuración y respuestas de error. La base de datos, autenticación y operaciones de tickets todavía no están implementadas.
