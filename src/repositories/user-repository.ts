@@ -1,12 +1,20 @@
 import type { ModelStatic } from "sequelize";
 import type { User } from "../models/user";
+import type { UserRole } from "../types/user-role";
 
-// Expone únicamente las consultas del modelo que necesita este repositorio.
-export type UserLookupModel = ModelStatic<User>;
+export interface CreateUserRecord {
+  name: string;
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+}
+
+// Expone las operaciones del modelo necesarias para consultar y guardar usuarios.
+export type UserRepositoryModel = ModelStatic<User>;
 
 // Encapsula las búsquedas de usuarios para que los servicios no consulten Sequelize directamente.
 export class UserRepository {
-  constructor(private readonly userModel: UserLookupModel) {}
+  constructor(private readonly userModel: UserRepositoryModel) {}
 
   // Busca un usuario por su clave primaria y devuelve null cuando no existe.
   findById(id: number): Promise<User | null> {
@@ -16,5 +24,10 @@ export class UserRepository {
   // Busca un usuario por su dirección de email y devuelve null si no hay coincidencia.
   findByEmail(email: string): Promise<User | null> {
     return this.userModel.findOne({ where: { email } });
+  }
+
+  // Guarda el nuevo usuario con el hash ya generado por la capa de servicio.
+  create(user: CreateUserRecord): Promise<User> {
+    return this.userModel.create(user);
   }
 }
