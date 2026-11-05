@@ -17,7 +17,11 @@
     "db:migrate": "sequelize-cli db:migrate --env development",
     "db:migrate:undo": "sequelize-cli db:migrate:undo --env development",
     "db:test:migrate": "sequelize-cli db:migrate --env test",
-    "db:test:migrate:undo": "sequelize-cli db:migrate:undo --env test"
+    "db:test:migrate:undo": "sequelize-cli db:migrate:undo --env test",
+    "db:seed:admin": "sequelize-cli db:seed --seed 20261105000400-seed-admin.js --env development",
+    "db:seed:admin:undo": "sequelize-cli db:seed:undo --seed 20261105000400-seed-admin.js --env development",
+    "db:test:seed:admin": "sequelize-cli db:seed --seed 20261105000400-seed-admin.js --env test",
+    "db:test:seed:admin:undo": "sequelize-cli db:seed:undo --seed 20261105000400-seed-admin.js --env test"
   },
   "repository": {
     "type": "git",
