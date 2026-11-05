@@ -1,0 +1,48 @@
+{
+  "name": "taskboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API REST para gestionar un tablero Kanban de desarrollo de software.",
+  "main": "dist/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Martin-Juncos/TaskBoard.git"
+  },
+  "keywords": [
+    "api-rest",
+    "kanban",
+    "taskboard"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.0.0",
+    "express": "^5.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "pg": "^8.0.0",
+    "pg-hstore": "^2.3.0",
+    "sequelize": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.0",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.0"
+  },
+  "bugs": {
+    "url": "https://github.com/Martin-Juncos/TaskBoard/issues"
+  },
+  "homepage": "https://github.com/Martin-Juncos/TaskBoard#readme"
+}
