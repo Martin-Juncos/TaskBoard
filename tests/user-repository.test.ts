@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { UserRepository, type UserLookupModel } from "../src/repositories/user-repository";
+import { UserRepository, type UserRepositoryModel } from "../src/repositories/user-repository";
 import type { User } from "../src/models/user";
 
 // Usa un usuario simulado para probar las consultas sin abrir una conexión a PostgreSQL.
@@ -24,7 +24,7 @@ test("busca usuarios por ID y email", async () => {
       calls.push(`email:${where.email}`);
       return testUser;
     },
-  } as unknown as UserLookupModel;
+  } as unknown as UserRepositoryModel;
   const repository = new UserRepository(userModel);
 
   assert.equal(await repository.findById(7), testUser);
