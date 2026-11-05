@@ -47,6 +47,7 @@ test("acepta JSON válido y devuelve 404 para una ruta aún no implementada", as
   assert.equal(response.status, 404);
 });
 
+// Comprueba que el middleware global traduce el JSON inválido al formato de error acordado.
 test("rechaza solicitudes con JSON malformado", async () => {
   const response = await fetch(`${baseUrl}/api/no-implementada`, {
     method: "POST",
@@ -55,4 +56,10 @@ test("rechaza solicitudes con JSON malformado", async () => {
   });
 
   assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: "JSON_INVALIDO",
+      message: "El cuerpo de la solicitud contiene JSON inválido.",
+    },
+  });
 });
