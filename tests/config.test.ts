@@ -7,6 +7,7 @@ test("lee la configuración desde las variables de entorno", () => {
   const config = readConfig({
     PORT: "4000",
     DATABASE_URL: "postgres://localhost/taskboard",
+    DATABASE_URL_TEST: "postgres://localhost/taskboard_test",
     JWT_SECRET: "secreto-de-prueba",
     JWT_EXPIRES_IN: "1h",
   });
@@ -14,6 +15,7 @@ test("lee la configuración desde las variables de entorno", () => {
   assert.deepEqual(config, {
     port: 4000,
     databaseUrl: "postgres://localhost/taskboard",
+    databaseUrlTest: "postgres://localhost/taskboard_test",
     jwtSecret: "secreto-de-prueba",
     jwtExpiresIn: "1h",
   });
