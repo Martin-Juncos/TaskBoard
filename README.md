@@ -2,7 +2,7 @@
 
 API REST para gestionar un tablero Kanban de desarrollo de software. Los tickets representan trabajo técnico y avanzan por estados hasta completarse. El proyecto se realiza como trabajo práctico integrador.
 
-> **Estado:** implementación en progreso. Ya existe la base Express/TypeScript, la ruta `GET /health`, manejo JSON de errores, pruebas iniciales, conexión a PostgreSQL y migraciones para usuarios y tickets. La autenticación y las operaciones de tickets todavía están pendientes; los endpoints y reglas descritos abajo siguen siendo el alcance acordado para el MVP.
+> **Estado:** implementación en progreso. Ya existe la base Express/TypeScript, las rutas `GET /health` y `POST /api/auth/register`, manejo JSON de errores, pruebas iniciales, conexión a PostgreSQL y migraciones para usuarios y tickets. El inicio de sesión, la protección de rutas y las operaciones de tickets todavía están pendientes; los endpoints y reglas descritos abajo siguen siendo el alcance acordado para el MVP.
 
 ## Objetivo
 
