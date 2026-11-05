@@ -30,4 +30,19 @@ export class UserRepository {
   create(user: CreateUserRecord): Promise<User> {
     return this.userModel.create(user);
   }
+
+  // Devuelve todos los usuarios ordenados por ID para listarlos de forma estable.
+  findAll(): Promise<User[]> {
+    return this.userModel.findAll({ order: [["id", "ASC"]] });
+  }
+
+  // Cambia el rol del usuario y devuelve null cuando el ID no existe.
+  async updateRole(id: number, role: UserRole): Promise<User | null> {
+    const user = await this.findById(id);
+    if (!user) return null;
+
+    user.role = role;
+    await user.save();
+    return user;
+  }
 }

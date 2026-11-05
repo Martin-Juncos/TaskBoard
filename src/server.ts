@@ -4,6 +4,10 @@ import { readConfig } from "./config/env";
 import { sequelize } from "./database/sequelize";
 import { User } from "./models/user";
 import { UserRepository } from "./repositories/user-repository";
+import { createAuthenticationMiddleware } from "./middleware/authentication";
+import { createRoleAuthorizationMiddleware } from "./middleware/authorize-role";
+import { createChangeUserRoleController, createListUsersController } from "./controllers/user-controller";
+import { ChangeUserRoleService, ListUsersService } from "./services/user-service";
 import { LoginUserService } from "./services/login-user-service";
 import { RegisterUserService } from "./services/register-user-service";
 
@@ -20,9 +24,17 @@ async function startServer(): Promise<void> {
     const userRepository = new UserRepository(User);
     const registerUserService = new RegisterUserService(userRepository);
     const loginUserService = new LoginUserService(userRepository, config);
+    const listUsersService = new ListUsersService(userRepository);
+    const changeUserRoleService = new ChangeUserRoleService(userRepository);
     const app = createApp({
       register: createRegisterUserController(registerUserService),
       login: createLoginUserController(loginUserService),
+      users: {
+        authenticate: createAuthenticationMiddleware(userRepository, config),
+        requireAdmin: createRoleAuthorizationMiddleware("admin"),
+        list: createListUsersController(listUsersService),
+        updateRole: createChangeUserRoleController(changeUserRoleService),
+      },
     });
 
     // Inicia el servidor usando el puerto centralizado en el módulo de configuración.
