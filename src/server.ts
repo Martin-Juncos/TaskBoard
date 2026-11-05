@@ -1,5 +1,8 @@
 import app from "./app";
-import { config } from "./config/env";
+import { readConfig } from "./config/env";
+
+// Carga y valida la configuración antes de intentar iniciar el servidor.
+const config = readConfig();
 
 // Inicia el servidor usando el puerto centralizado en el módulo de configuración.
 app.listen(config.port, () => {
