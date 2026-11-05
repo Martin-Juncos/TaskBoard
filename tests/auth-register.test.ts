@@ -28,7 +28,7 @@ const repository = {
 
 // Monta la ruta real con el servicio de registro y el middleware de errores de la aplicación.
 const service = new RegisterUserService(repository, async (_password, _rounds) => "hash-de-prueba");
-const app = createApp(createRegisterUserController(service));
+const app = createApp({ register: createRegisterUserController(service) });
 let baseUrl: string;
 let server: ReturnType<typeof app.listen>;
 
