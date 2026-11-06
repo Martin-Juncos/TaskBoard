@@ -30,6 +30,9 @@ export interface TicketResponse {
   alert: boolean;
 }
 
+// Mantiene una columna por estado, incluso cuando no hay tickets en alguna de ellas.
+export type TicketsByStatus = Record<TicketStatus, TicketResponse[]>;
+
 type TicketCreationRepository = Pick<TicketRepository, "create">;
 type TicketReadRepository = Pick<TicketRepository, "findById" | "findAll">;
 
@@ -82,19 +85,31 @@ export class GetTicketService {
 export class ListTicketsService {
   constructor(private readonly ticketRepository: Pick<TicketReadRepository, "findAll">) {}
 
-  async execute(filtersValue?: unknown, currentUserId?: number): Promise<TicketResponse[]> {
+  async execute(filtersValue?: unknown, currentUserId?: number): Promise<TicketResponse[] | TicketsByStatus> {
     const filters = validateTicketListFilters(filtersValue);
     if (filters.mine && (!Number.isSafeInteger(currentUserId) || !currentUserId || currentUserId <= 0)) {
       throw new HttpError(401, "USUARIO_NO_AUTENTICADO", "Se requiere iniciar sesión para consultar mis tickets.");
     }
 
-    const { mine, ...repositoryFilters } = filters;
+    const { mine, groupBy, ...repositoryFilters } = filters;
     const resolvedFilters: TicketRepositoryFilters = {
       ...repositoryFilters,
       ...(mine ? { mineUserId: currentUserId } : {}),
     };
     const tickets = await this.ticketRepository.findAll(resolvedFilters);
-    return tickets.map(toTicketResponse);
+    const response = tickets.map(toTicketResponse);
+    if (groupBy !== "status") return response;
+
+    // Agrupa después de filtrar para conservar el contrato del repositorio y todas las columnas Kanban.
+    const grouped: TicketsByStatus = {
+      pending: [],
+      in_progress: [],
+      in_review: [],
+      completed: [],
+      blocked: [],
+    };
+    for (const ticket of response) grouped[ticket.status].push(ticket);
+    return grouped;
   }
 }
 

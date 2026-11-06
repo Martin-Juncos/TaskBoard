@@ -9,9 +9,10 @@ export interface TicketListFilters {
   assigneeId?: number;
   mine?: boolean;
   unassigned?: boolean;
+  groupBy?: "status";
 }
 
 // Agrega al filtro de consulta el ID del usuario actual para resolver mine=true.
-export interface TicketRepositoryFilters extends Omit<TicketListFilters, "mine"> {
+export interface TicketRepositoryFilters extends Omit<TicketListFilters, "mine" | "groupBy"> {
   mineUserId?: number;
 }
