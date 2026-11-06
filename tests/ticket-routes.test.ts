@@ -681,3 +681,89 @@ test("PUT /api/tickets/:id permite al developer editar solo tickets propios o as
   tickets.delete(91);
   tickets.delete(92);
 });
+
+// Solo el responsable actual cambia estado; un ticket libre pasa a estar asignado a quien lo toma.
+test("PATCH /api/tickets/:id/status limita el cambio al responsable o al admin", async () => {
+  const makeRecord = (createdById: number, assigneeId: number | null): CreateTicketRecord => ({
+    title: "Ticket para validar estado",
+    description: null,
+    type: "task",
+    priority: "medium",
+    status: "pending",
+    dueDate: "2099-01-01",
+    createdById,
+    assigneeId,
+    branchType: "chore",
+    branchName: "chore/validar-estado",
+    commitType: "chore",
+    commitScope: null,
+    commitDescription: "Ticket para validar estado",
+  });
+  tickets.set(93, makeTicket(93, makeRecord(user.id, otherDeveloper.id)));
+  tickets.set(94, makeTicket(94, makeRecord(otherDeveloper.id, user.id)));
+
+  // Ser autor no autoriza a cambiar el estado si el ticket está asignado a otro desarrollador.
+  const ownerDenied = await fetch(`${baseUrl}/api/tickets/93/status`, {
+    method: "PATCH",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "blocked" }),
+  });
+  assert.equal(ownerDenied.status, 403);
+
+  // El responsable puede cambiarlo aunque otra persona haya creado el ticket.
+  const assigneeAllowed = await fetch(`${baseUrl}/api/tickets/94/status`, {
+    method: "PATCH",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "in_review" }),
+  });
+  assert.equal(assigneeAllowed.status, 200);
+
+  // El administrador puede cambiar el estado incluso si no es autor ni responsable.
+  const adminAllowed = await fetch(`${baseUrl}/api/tickets/93/status`, {
+    method: "PATCH",
+    headers: { ...authorizationHeaders(admin), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "blocked" }),
+  });
+  assert.equal(adminAllowed.status, 200);
+  tickets.delete(93);
+  tickets.delete(94);
+});
+
+// Un developer puede tomar un ticket libre para sí mismo, pero no asignárselo a otra persona.
+test("PUT /api/tickets/:id permite autoasignación y rechaza asignación arbitraria", async () => {
+  const makeRecord = (createdById: number): CreateTicketRecord => ({
+    title: "Ticket libre",
+    description: null,
+    type: "task",
+    priority: "medium",
+    status: "pending",
+    dueDate: "2099-01-01",
+    createdById,
+    assigneeId: null,
+    branchType: "chore",
+    branchName: "chore/ticket-libre",
+    commitType: "chore",
+    commitScope: null,
+    commitDescription: "Ticket libre",
+  });
+  tickets.set(96, makeTicket(96, makeRecord(otherDeveloper.id)));
+  tickets.set(97, makeTicket(97, makeRecord(otherDeveloper.id)));
+
+  const denied = await fetch(`${baseUrl}/api/tickets/96`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ assigneeId: otherDeveloper.id }),
+  });
+  assert.equal(denied.status, 403);
+
+  const allowed = await fetch(`${baseUrl}/api/tickets/97`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ assigneeId: user.id }),
+  });
+  const body = (await allowed.json()) as Record<string, unknown>;
+  assert.equal(allowed.status, 200);
+  assert.equal(body.assigneeId, user.id);
+  tickets.delete(96);
+  tickets.delete(97);
+});
