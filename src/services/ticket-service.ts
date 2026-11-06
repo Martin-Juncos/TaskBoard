@@ -5,7 +5,7 @@ import type { AuthenticatedUser } from "../types/authenticated-user";
 import type { BranchType, CommitType, TicketPriority, TicketStatus, TicketType } from "../types/ticket-enums";
 import { calculateAlert, calculateCompleted } from "../utils/ticket-derived-fields";
 import { suggestBranchName, suggestBranchType, suggestCommitType } from "../utils/ticket-suggestions";
-import { validateCreateTicketInput, validateUpdateTicketInput } from "../validation/ticket";
+import { validateCreateTicketInput, validateTicketStatusInput, validateUpdateTicketInput } from "../validation/ticket";
 import { validateTicketListFilters } from "../validation/ticket-search";
 import type { TicketRepositoryFilters } from "../types/ticket-filters";
 
@@ -123,6 +123,31 @@ export class RegenerateTicketSuggestionsService {
       commitType: suggestCommitType(ticket.type),
       commitDescription: ticket.title,
     });
+    return toTicketResponse(updated);
+  }
+}
+
+// Cambia solo el estado; si un desarrollador toma un ticket libre, también queda asignado a sí mismo.
+export class UpdateTicketStatusService {
+  constructor(private readonly ticketRepository: Pick<TicketRepository, "findById" | "update">) {}
+
+  async execute(idValue: unknown, input: unknown, actor: AuthenticatedUser): Promise<TicketResponse> {
+    const id = parseTicketId(idValue);
+    const status = validateTicketStatusInput(input);
+    const ticket = await this.ticketRepository.findById(id);
+    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+
+    // Un administrador cambia cualquier estado; un desarrollador solo uno asignado o sin responsable.
+    if (actor.role !== "admin" && ticket.assigneeId !== actor.id && ticket.assigneeId !== null) {
+      throw permissionError();
+    }
+
+    // Al actuar sobre un ticket libre, el desarrollador autenticado lo toma además de cambiar su estado.
+    const changes = {
+      status,
+      ...(actor.role !== "admin" && ticket.assigneeId === null ? { assigneeId: actor.id } : {}),
+    };
+    const updated = await this.ticketRepository.update(ticket, changes);
     return toTicketResponse(updated);
   }
 }
