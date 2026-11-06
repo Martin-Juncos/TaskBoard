@@ -4,7 +4,6 @@ import { after, before, test } from "node:test";
 import { createApp } from "../src/app";
 import { createChangeUserRoleController, createListUsersController } from "../src/controllers/user-controller";
 import { createAuthenticationMiddleware } from "../src/middleware/authentication";
-import { createRoleAuthorizationMiddleware } from "../src/middleware/authorize-role";
 import type { User } from "../src/models/user";
 import { ChangeUserRoleService, ListUsersService } from "../src/services/user-service";
 import { signAccessToken } from "../src/utils/jwt";
@@ -32,7 +31,6 @@ before(async () => {
   const app = createApp({
     users: {
       authenticate: createAuthenticationMiddleware(repository, settings),
-      requireAdmin: createRoleAuthorizationMiddleware("admin"),
       list: createListUsersController(new ListUsersService(repository)),
       updateRole: createChangeUserRoleController(new ChangeUserRoleService(repository)),
     },
