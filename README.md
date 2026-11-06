@@ -155,4 +155,4 @@ npm run db:migrate
 npm run dev
 ```
 
-`npm run dev` espera la conexión a PostgreSQL antes de iniciar el servidor. `npm run db:migrate` aplica las migraciones pendientes en `taskboard`; `npm run db:migrate:undo` revierte la última migración. Para la base aislada de pruebas usá `npm run db:test:migrate` y `npm run db:test:migrate:undo`. `npm run build` compila TypeScript, `npm start` ejecuta el resultado compilado y `npm test` corre las pruebas automatizadas.
+`npm run dev` espera la conexión a PostgreSQL antes de iniciar el servidor. `npm run db:migrate` aplica las migraciones pendientes en `taskboard`; `npm run db:migrate:undo` revierte la última migración. Para la base aislada de pruebas usá `npm run db:test:migrate` y `npm run db:test:migrate:undo`. `npm test` aplica primero esas migraciones y usa solo `DATABASE_URL_TEST`; los casos de PostgreSQL limpian `users` y `tickets` entre pruebas. `npm run build` compila TypeScript y `npm start` ejecuta el resultado compilado.
