@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 import { HttpError } from "../errors/http-error";
-import type { CreateTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService } from "../services/ticket-service";
+import type { CreateTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService, UpdateTicketStatusService } from "../services/ticket-service";
 
 // Crea un ticket a nombre del usuario autenticado y responde 201 al guardarlo.
 export function createCreateTicketController(service: Pick<CreateTicketService, "execute">): RequestHandler {
@@ -43,6 +43,21 @@ export function createRegenerateTicketSuggestionsController(
     }
     try {
       response.status(200).json(await service.execute(request.params.id, request.user));
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+// Cambia el estado solicitado y devuelve el ticket actualizado.
+export function createUpdateTicketStatusController(service: Pick<UpdateTicketStatusService, "execute">): RequestHandler {
+  return async (request, response, next) => {
+    if (!request.user) {
+      next(new HttpError(401, "TOKEN_REQUERIDO", "Se requiere un token Bearer válido."));
+      return;
+    }
+    try {
+      response.status(200).json(await service.execute(request.params.id, request.body, request.user));
     } catch (error) {
       next(error);
     }

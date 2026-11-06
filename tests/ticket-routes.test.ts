@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, test } from "node:test";
 import { createApp } from "../src/app";
-import { createCreateTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController } from "../src/controllers/ticket-controller";
+import { createCreateTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController, createUpdateTicketStatusController } from "../src/controllers/ticket-controller";
 import { createAuthenticationMiddleware } from "../src/middleware/authentication";
 import type { Ticket } from "../src/models/ticket";
 import type { User } from "../src/models/user";
 import type { CreateTicketRecord, UpdateTicketRecord } from "../src/repositories/ticket-repository";
 import type { TicketRepositoryFilters } from "../src/types/ticket-filters";
-import { CreateTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService } from "../src/services/ticket-service";
+import { CreateTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService, UpdateTicketStatusService } from "../src/services/ticket-service";
 import { signAccessToken } from "../src/utils/jwt";
 
 const settings = { jwtSecret: "secreto-para-probar-tickets", jwtExpiresIn: "1h" };
@@ -103,6 +103,7 @@ before(async () => {
       create: createCreateTicketController(new CreateTicketService(ticketRepository)),
       update: createUpdateTicketController(new UpdateTicketService(ticketRepository)),
       regenerateSuggestions: createRegenerateTicketSuggestionsController(new RegenerateTicketSuggestionsService(ticketRepository)),
+      updateStatus: createUpdateTicketStatusController(new UpdateTicketStatusService(ticketRepository)),
       findById: createGetTicketController(new GetTicketService(ticketRepository)),
       list: createListTicketsController(new ListTicketsService(ticketRepository)),
     },
@@ -475,4 +476,75 @@ test("POST /api/tickets/:id/regenerate-suggestions permite administrador", async
   assert.equal(response.status, 200);
   assert.equal(body.branchType, "bugfix");
   assert.equal(body.commitType, "fix");
+});
+
+// Protege la ruta, valida el estado y responde errores claros para ID o ticket ausentes.
+test("PATCH /api/tickets/:id/status requiere JWT y valida entrada", async () => {
+  const withoutToken = await fetch(`${baseUrl}/api/tickets/7/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "completed" }),
+  });
+  assert.equal(withoutToken.status, 401);
+
+  for (const [id, input, expectedStatus, expectedCode] of [
+    ["999", { status: "completed" }, 404, "TICKET_NO_ENCONTRADO"],
+    ["abc", { status: "completed" }, 400, "ID_INVALIDO"],
+    ["7", {}, 400, "VALIDACION_TICKET"],
+    ["7", { status: "queued" }, 400, "VALIDACION_TICKET"],
+  ] as const) {
+    const response = await fetch(`${baseUrl}/api/tickets/${id}/status`, {
+      method: "PATCH",
+      headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const body = (await response.json()) as { error: { code: string } };
+    assert.equal(response.status, expectedStatus);
+    assert.equal(body.error.code, expectedCode);
+  }
+});
+
+// El responsable puede cambiar su estado y un desarrollador que toma uno libre queda asignado.
+test("PATCH /api/tickets/:id/status actualiza el estado y asigna tickets libres", async () => {
+  const assigned = await fetch(`${baseUrl}/api/tickets/7/status`, {
+    method: "PATCH",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "in_review" }),
+  });
+  const assignedBody = (await assigned.json()) as Record<string, unknown>;
+  assert.equal(assigned.status, 200);
+  assert.equal(assignedBody.status, "in_review");
+  assert.equal(assignedBody.assigneeId, user.id);
+
+  const unassigned = await fetch(`${baseUrl}/api/tickets/8/status`, {
+    method: "PATCH",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "in_progress" }),
+  });
+  const unassignedBody = (await unassigned.json()) as Record<string, unknown>;
+  assert.equal(unassigned.status, 200);
+  assert.equal(unassignedBody.status, "in_progress");
+  assert.equal(unassignedBody.assigneeId, user.id);
+});
+
+// Un desarrollador no cambia el estado ajeno; el administrador puede cambiar cualquier ticket.
+test("PATCH /api/tickets/:id/status respeta permisos", async () => {
+  const denied = await fetch(`${baseUrl}/api/tickets/7/status`, {
+    method: "PATCH",
+    headers: { ...authorizationHeaders(otherDeveloper), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "blocked" }),
+  });
+  const deniedBody = (await denied.json()) as { error: { code: string } };
+  assert.equal(denied.status, 403);
+  assert.equal(deniedBody.error.code, "PERMISO_DENEGADO");
+
+  const allowed = await fetch(`${baseUrl}/api/tickets/7/status`, {
+    method: "PATCH",
+    headers: { ...authorizationHeaders(admin), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "completed" }),
+  });
+  const allowedBody = (await allowed.json()) as Record<string, unknown>;
+  assert.equal(allowed.status, 200);
+  assert.equal(allowedBody.status, "completed");
+  assert.equal(allowedBody.completed, true);
 });
