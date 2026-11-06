@@ -68,10 +68,18 @@ test("busca tickets por título o descripción con coincidencia parcial", async 
   } as unknown as TicketRepositoryModel;
   const repository = new TicketRepository(model);
 
-  await repository.findAll("100%_API");
+  await repository.findAll({ search: "100%_API", status: "pending", priority: "high", type: "bug" });
   assert.ok(capturedOptions);
-  const where = capturedOptions.where as { [Op.or]: Array<Record<string, Record<symbol, string>>> };
+  const where = capturedOptions.where as {
+    status: string;
+    priority: string;
+    type: string;
+    [Op.or]: Array<Record<string, Record<symbol, string>>>;
+  };
   const conditions = where[Op.or];
+  assert.equal(where.status, "pending");
+  assert.equal(where.priority, "high");
+  assert.equal(where.type, "bug");
   assert.equal(conditions[0].title[Op.iLike], "%100\\%\\_API%");
   assert.equal(conditions[1].description[Op.iLike], "%100\\%\\_API%");
   assert.deepEqual(capturedOptions.order, [["id", "ASC"]]);

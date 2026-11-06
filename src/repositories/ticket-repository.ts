@@ -1,5 +1,6 @@
-import { Op, type ModelStatic } from "sequelize";
+import { Op, type ModelStatic, type WhereOptions } from "sequelize";
 import type { Ticket } from "../models/ticket";
+import type { TicketListFilters } from "../types/ticket-filters";
 
 // Expone la consulta mínima del modelo que necesita el repositorio de tickets.
 export type TicketRepositoryModel = ModelStatic<Ticket>;
@@ -37,17 +38,23 @@ export class TicketRepository {
   }
 
   // Busca en título o descripción sin distinguir mayúsculas y devuelve resultados ordenados por ID.
-  findAll(search?: string): Promise<Ticket[]> {
-    const escapedSearch = search?.replace(/[\\%_]/g, "\\$&");
-    const where = escapedSearch
-      ? {
-          [Op.or]: [
-            { title: { [Op.iLike]: `%${escapedSearch}%` } },
-            { description: { [Op.iLike]: `%${escapedSearch}%` } },
-          ],
-        }
-      : undefined;
+  findAll(filters: TicketListFilters = {}): Promise<Ticket[]> {
+    const escapedSearch = filters.search?.replace(/[\\%_]/g, "\\$&");
+    const hasFilters = Boolean(escapedSearch || filters.status || filters.priority || filters.type);
+    const where: WhereOptions<Ticket> = {};
 
-    return this.ticketModel.findAll({ where, order: [["id", "ASC"]] });
+    if (filters.status) Object.assign(where, { status: filters.status });
+    if (filters.priority) Object.assign(where, { priority: filters.priority });
+    if (filters.type) Object.assign(where, { type: filters.type });
+    if (escapedSearch) {
+      Object.assign(where, {
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${escapedSearch}%` } },
+          { description: { [Op.iLike]: `%${escapedSearch}%` } },
+        ],
+      });
+    }
+
+    return this.ticketModel.findAll({ where: hasFilters ? where : undefined, order: [["id", "ASC"]] });
   }
 }

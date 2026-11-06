@@ -28,11 +28,11 @@ export function createGetTicketController(service: Pick<GetTicketService, "execu
   };
 }
 
-// Pasa el término opcional de búsqueda al servicio y devuelve la lista de tickets.
+// Pasa los parámetros de búsqueda y filtros al servicio y devuelve la lista de tickets.
 export function createListTicketsController(service: Pick<ListTicketsService, "execute">): RequestHandler {
   return async (request, response, next) => {
     try {
-      response.status(200).json(await service.execute(request.query.search));
+      response.status(200).json(await service.execute(request.query));
     } catch (error) {
       next(error);
     }
