@@ -28,11 +28,11 @@ export function createGetTicketController(service: Pick<GetTicketService, "execu
   };
 }
 
-// Devuelve el listado inicial de tickets sin filtros ni datos calculados persistidos.
+// Pasa el término opcional de búsqueda al servicio y devuelve la lista de tickets.
 export function createListTicketsController(service: Pick<ListTicketsService, "execute">): RequestHandler {
-  return async (_request, response, next) => {
+  return async (request, response, next) => {
     try {
-      response.status(200).json(await service.execute());
+      response.status(200).json(await service.execute(request.query.search));
     } catch (error) {
       next(error);
     }

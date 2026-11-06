@@ -1,4 +1,4 @@
-import type { ModelStatic } from "sequelize";
+import { Op, type ModelStatic } from "sequelize";
 import type { Ticket } from "../models/ticket";
 
 // Expone la consulta mínima del modelo que necesita el repositorio de tickets.
@@ -36,8 +36,18 @@ export class TicketRepository {
     return this.ticketModel.create(ticket);
   }
 
-  // Devuelve todos los tickets ordenados por ID para la primera versión del listado.
-  findAll(): Promise<Ticket[]> {
-    return this.ticketModel.findAll({ order: [["id", "ASC"]] });
+  // Busca en título o descripción sin distinguir mayúsculas y devuelve resultados ordenados por ID.
+  findAll(search?: string): Promise<Ticket[]> {
+    const escapedSearch = search?.replace(/[\\%_]/g, "\\$&");
+    const where = escapedSearch
+      ? {
+          [Op.or]: [
+            { title: { [Op.iLike]: `%${escapedSearch}%` } },
+            { description: { [Op.iLike]: `%${escapedSearch}%` } },
+          ],
+        }
+      : undefined;
+
+    return this.ticketModel.findAll({ where, order: [["id", "ASC"]] });
   }
 }
