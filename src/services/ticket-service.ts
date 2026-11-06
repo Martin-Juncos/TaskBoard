@@ -102,6 +102,31 @@ export class UpdateTicketService {
   }
 }
 
+// Regenera las sugerencias solo cuando se invoca esta operación explícita.
+export class RegenerateTicketSuggestionsService {
+  constructor(private readonly ticketRepository: Pick<TicketRepository, "findById" | "update">) {}
+
+  async execute(idValue: unknown, actor: AuthenticatedUser): Promise<TicketResponse> {
+    const id = parseTicketId(idValue);
+    const ticket = await this.ticketRepository.findById(id);
+    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+
+    // Reutiliza la regla de edición: administrador, autor o responsable del ticket.
+    if (actor.role !== "admin" && ticket.createdById !== actor.id && ticket.assigneeId !== actor.id) {
+      throw permissionError();
+    }
+
+    // Calcula a partir del tipo y título actuales; conserva commitScope y los demás campos.
+    const updated = await this.ticketRepository.update(ticket, {
+      branchType: suggestBranchType(ticket.type),
+      branchName: suggestBranchName(ticket.type, ticket.title),
+      commitType: suggestCommitType(ticket.type),
+      commitDescription: ticket.title,
+    });
+    return toTicketResponse(updated);
+  }
+}
+
 // Mantiene uniforme el error de autorización en las operaciones de edición.
 function permissionError(): HttpError {
   return new HttpError(403, "PERMISO_DENEGADO", "No tenés permiso para editar este ticket.");
