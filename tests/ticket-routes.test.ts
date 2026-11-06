@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, test } from "node:test";
 import { createApp } from "../src/app";
-import { createCreateTicketController, createGetTicketController, createListTicketsController } from "../src/controllers/ticket-controller";
+import { createCreateTicketController, createGetTicketController, createListTicketsController, createUpdateTicketController } from "../src/controllers/ticket-controller";
 import { createAuthenticationMiddleware } from "../src/middleware/authentication";
 import type { Ticket } from "../src/models/ticket";
 import type { User } from "../src/models/user";
-import type { CreateTicketRecord } from "../src/repositories/ticket-repository";
+import type { CreateTicketRecord, UpdateTicketRecord } from "../src/repositories/ticket-repository";
 import type { TicketRepositoryFilters } from "../src/types/ticket-filters";
-import { CreateTicketService, GetTicketService, ListTicketsService } from "../src/services/ticket-service";
+import { CreateTicketService, GetTicketService, ListTicketsService, UpdateTicketService } from "../src/services/ticket-service";
 import { signAccessToken } from "../src/utils/jwt";
 
 const settings = { jwtSecret: "secreto-para-probar-tickets", jwtExpiresIn: "1h" };
@@ -21,6 +21,8 @@ const user = {
   createdAt: new Date(),
   updatedAt: new Date(),
 } as User;
+const otherDeveloper = { ...user, id: 55, email: "otro@example.com" } as User;
+const admin = { ...user, id: 1, email: "admin@example.com", role: "admin" } as User;
 const tickets = new Map<number, Ticket>();
 let nextTicketId = 8;
 let baseUrl: string;
@@ -29,7 +31,17 @@ let server: ReturnType<ReturnType<typeof createApp>["listen"]>;
 // Arma una instancia simulada compatible con el formato de respuesta del modelo Sequelize.
 function makeTicket(id: number, data: CreateTicketRecord): Ticket {
   const values = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
-  return { ...values, get: () => ({ ...values }) } as unknown as Ticket;
+  // Simula la actualización de Sequelize para que la respuesta lea los valores persistidos.
+  const ticket = {
+    ...values,
+    get: () => ({ ...values }),
+    update: async (changes: UpdateTicketRecord) => {
+      Object.assign(values, changes);
+      Object.assign(ticket, changes);
+      return ticket;
+    },
+  } as unknown as Ticket;
+  return ticket;
 }
 
 // Monta el router real con repositorios en memoria y un usuario autenticado de prueba.
@@ -65,7 +77,7 @@ before(async () => {
     commitDescription: "Bloqueo de despliegue",
   }));
 
-  const userRepository = { findById: async (id: number) => (id === user.id ? user : null) };
+  const userRepository = { findById: async (id: number) => [user, otherDeveloper, admin].find((item) => item.id === id) ?? null };
   const ticketRepository = {
     create: async (data: CreateTicketRecord) => {
       const ticket = makeTicket(nextTicketId++, data);
@@ -73,6 +85,7 @@ before(async () => {
       return ticket;
     },
     findById: async (id: number) => tickets.get(id) ?? null,
+    update: async (ticket: Ticket, changes: UpdateTicketRecord) => ticket.update(changes),
     findAll: async (filters?: TicketRepositoryFilters) => [...tickets.values()]
       .filter((ticket) => !filters?.search || ticket.title.toLowerCase().includes(filters.search.toLowerCase()) ||
         (ticket.description ?? "").toLowerCase().includes(filters.search.toLowerCase()))
@@ -88,6 +101,7 @@ before(async () => {
     tickets: {
       authenticate: createAuthenticationMiddleware(userRepository, settings),
       create: createCreateTicketController(new CreateTicketService(ticketRepository)),
+      update: createUpdateTicketController(new UpdateTicketService(ticketRepository)),
       findById: createGetTicketController(new GetTicketService(ticketRepository)),
       list: createListTicketsController(new ListTicketsService(ticketRepository)),
     },
@@ -108,8 +122,8 @@ after(async () => {
 });
 
 // Devuelve un token real firmado por el mismo secreto que usa el middleware.
-function authorizationHeaders(): Record<string, string> {
-  const token = signAccessToken({ userId: user.id, role: user.role }, settings);
+function authorizationHeaders(currentUser: User = user): Record<string, string> {
+  const token = signAccessToken({ userId: currentUser.id, role: currentUser.role }, settings);
   return { Authorization: `Bearer ${token}` };
 }
 
@@ -299,4 +313,106 @@ test("GET /api/tickets valida los filtros", async () => {
     assert.equal(response.status, 400);
     assert.equal(body.error.code, "FILTRO_INVALIDO");
   }
+});
+
+// Cambiar el título no vuelve a calcular la rama ni los datos del commit ya guardados.
+test("PUT /api/tickets/:id actualiza el título sin alterar rama, commit ni autor", async () => {
+  const response = await fetch(`${baseUrl}/api/tickets/7`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Nuevo título", createdById: otherDeveloper.id }),
+  });
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.title, "Nuevo título");
+  assert.equal(body.createdById, user.id);
+  assert.equal(body.branchType, "chore");
+  assert.equal(body.branchName, "chore/ticket-de-ejemplo");
+  assert.equal(body.commitType, "chore");
+  assert.equal(body.commitScope, null);
+  assert.equal(body.commitDescription, "Ticket de ejemplo");
+});
+
+// Solo cambia las sugerencias guardadas cuando el cliente las envía expresamente.
+test("PUT /api/tickets/:id permite editar rama y commit de forma explícita", async () => {
+  const response = await fetch(`${baseUrl}/api/tickets/7`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ branchName: "chore/rama-manual", commitDescription: "Cambio manual" }),
+  });
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 200);
+  assert.equal(body.branchName, "chore/rama-manual");
+  assert.equal(body.commitDescription, "Cambio manual");
+});
+
+// Protege la ruta y diferencia los IDs ausentes de los cuerpos inválidos.
+test("PUT /api/tickets/:id requiere JWT y valida ID y campos", async () => {
+  const withoutToken = await fetch(`${baseUrl}/api/tickets/7`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Nuevo" }),
+  });
+  assert.equal(withoutToken.status, 401);
+
+  for (const [id, input, expectedStatus, expectedCode] of [
+    ["999", { title: "Nuevo" }, 404, "TICKET_NO_ENCONTRADO"],
+    ["abc", { title: "Nuevo" }, 400, "ID_INVALIDO"],
+    ["7", {}, 400, "VALIDACION_TICKET"],
+    ["7", { title: "  " }, 400, "VALIDACION_TICKET"],
+    ["7", { type: "epic" }, 400, "VALIDACION_TICKET"],
+    ["7", { dueDate: "2026-02-30" }, 400, "VALIDACION_TICKET"],
+  ] as const) {
+    const response = await fetch(`${baseUrl}/api/tickets/${id}`, {
+      method: "PUT",
+      headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const body = (await response.json()) as { error: { code: string } };
+    assert.equal(response.status, expectedStatus);
+    assert.equal(body.error.code, expectedCode);
+  }
+});
+
+// El desarrollador ajeno no edita tickets, pero el administrador sí puede hacerlo.
+test("PUT /api/tickets/:id respeta permisos de desarrollador y administrador", async () => {
+  const denied = await fetch(`${baseUrl}/api/tickets/7`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(otherDeveloper), "Content-Type": "application/json" },
+    body: JSON.stringify({ priority: "high" }),
+  });
+  const deniedBody = (await denied.json()) as { error: { code: string } };
+  assert.equal(denied.status, 403);
+  assert.equal(deniedBody.error.code, "PERMISO_DENEGADO");
+
+  const allowed = await fetch(`${baseUrl}/api/tickets/7`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(admin), "Content-Type": "application/json" },
+    body: JSON.stringify({ priority: "high" }),
+  });
+  const allowedBody = (await allowed.json()) as Record<string, unknown>;
+  assert.equal(allowed.status, 200);
+  assert.equal(allowedBody.priority, "high");
+});
+
+// Cambiar el estado exige ser responsable o tomar el ticket libre en la misma solicitud.
+test("PUT /api/tickets/:id controla cambios de estado y asignación", async () => {
+  const denied = await fetch(`${baseUrl}/api/tickets/9`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "in_progress" }),
+  });
+  assert.equal(denied.status, 403);
+
+  const allowed = await fetch(`${baseUrl}/api/tickets/9`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ assigneeId: user.id, status: "in_progress" }),
+  });
+  const body = (await allowed.json()) as Record<string, unknown>;
+  assert.equal(allowed.status, 200);
+  assert.equal(body.assigneeId, user.id);
+  assert.equal(body.status, "in_progress");
 });
