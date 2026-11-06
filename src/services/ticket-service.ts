@@ -152,6 +152,25 @@ export class UpdateTicketStatusService {
   }
 }
 
+// Elimina tickets únicamente cuando la solicitud proviene de un administrador.
+export class DeleteTicketService {
+  constructor(private readonly ticketRepository: Pick<TicketRepository, "findById" | "delete">) {}
+
+  async execute(idValue: unknown, actor: AuthenticatedUser): Promise<{ message: string }> {
+    // Comprueba permisos antes de consultar el ID para que solo administradores accedan a esta operación.
+    if (actor.role !== "admin") {
+      throw new HttpError(403, "PERMISO_DENEGADO", "Solo un administrador puede eliminar tickets.");
+    }
+
+    const id = parseTicketId(idValue);
+    const ticket = await this.ticketRepository.findById(id);
+    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+
+    await this.ticketRepository.delete(ticket);
+    return { message: "Ticket eliminado correctamente." };
+  }
+}
+
 // Mantiene uniforme el error de autorización en las operaciones de edición.
 function permissionError(): HttpError {
   return new HttpError(403, "PERMISO_DENEGADO", "No tenés permiso para editar este ticket.");

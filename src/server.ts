@@ -9,11 +9,11 @@ import { TicketRepository } from "./repositories/ticket-repository";
 import { createAuthenticationMiddleware } from "./middleware/authentication";
 import { createRoleAuthorizationMiddleware } from "./middleware/authorize-role";
 import { createChangeUserRoleController, createListUsersController } from "./controllers/user-controller";
-import { createCreateTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController, createUpdateTicketStatusController } from "./controllers/ticket-controller";
+import { createCreateTicketController, createDeleteTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController, createUpdateTicketStatusController } from "./controllers/ticket-controller";
 import { ChangeUserRoleService, ListUsersService } from "./services/user-service";
 import { LoginUserService } from "./services/login-user-service";
 import { RegisterUserService } from "./services/register-user-service";
-import { CreateTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService, UpdateTicketStatusService } from "./services/ticket-service";
+import { CreateTicketService, DeleteTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService, UpdateTicketStatusService } from "./services/ticket-service";
 
 // Carga y valida la configuración antes de intentar iniciar el servidor.
 const config = readConfig();
@@ -35,6 +35,7 @@ async function startServer(): Promise<void> {
     const updateTicketService = new UpdateTicketService(ticketRepository);
     const regenerateTicketSuggestionsService = new RegenerateTicketSuggestionsService(ticketRepository);
     const updateTicketStatusService = new UpdateTicketStatusService(ticketRepository);
+    const deleteTicketService = new DeleteTicketService(ticketRepository);
     const getTicketService = new GetTicketService(ticketRepository);
     const listTicketsService = new ListTicketsService(ticketRepository);
     const app = createApp({
@@ -52,6 +53,7 @@ async function startServer(): Promise<void> {
         update: createUpdateTicketController(updateTicketService),
         regenerateSuggestions: createRegenerateTicketSuggestionsController(regenerateTicketSuggestionsService),
         updateStatus: createUpdateTicketStatusController(updateTicketStatusService),
+        delete: createDeleteTicketController(deleteTicketService),
         findById: createGetTicketController(getTicketService),
         list: createListTicketsController(listTicketsService),
       },

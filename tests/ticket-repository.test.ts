@@ -37,6 +37,16 @@ test("actualiza un ticket sin reemplazar campos omitidos", async () => {
   assert.deepEqual(received, changes);
 });
 
+// Delega la eliminación al método destroy de la instancia Sequelize encontrada.
+test("elimina un ticket existente", async () => {
+  let destroyed = false;
+  const ticket = { destroy: async () => { destroyed = true; } } as unknown as Ticket;
+  const repository = new TicketRepository({} as TicketRepositoryModel);
+
+  await repository.delete(ticket);
+  assert.equal(destroyed, true);
+});
+
 // Comprueba que la creación y el listado deleguen al modelo Sequelize con orden estable.
 test("crea tickets y lista registros en orden de ID", async () => {
   const expected = { id: 12, title: "Configurar tablero" } as Ticket;
