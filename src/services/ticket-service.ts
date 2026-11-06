@@ -6,6 +6,7 @@ import { calculateAlert, calculateCompleted } from "../utils/ticket-derived-fiel
 import { suggestBranchName, suggestBranchType, suggestCommitType } from "../utils/ticket-suggestions";
 import { validateCreateTicketInput } from "../validation/ticket";
 import { validateTicketListFilters } from "../validation/ticket-search";
+import type { TicketRepositoryFilters } from "../types/ticket-filters";
 
 // Define los campos públicos de ticket y agrega las propiedades que se calculan al consultar.
 export interface TicketResponse {
@@ -81,9 +82,18 @@ export class GetTicketService {
 export class ListTicketsService {
   constructor(private readonly ticketRepository: Pick<TicketReadRepository, "findAll">) {}
 
-  async execute(filtersValue?: unknown): Promise<TicketResponse[]> {
+  async execute(filtersValue?: unknown, currentUserId?: number): Promise<TicketResponse[]> {
     const filters = validateTicketListFilters(filtersValue);
-    const tickets = await this.ticketRepository.findAll(filters);
+    if (filters.mine && (!Number.isSafeInteger(currentUserId) || !currentUserId || currentUserId <= 0)) {
+      throw new HttpError(401, "USUARIO_NO_AUTENTICADO", "Se requiere iniciar sesión para consultar mis tickets.");
+    }
+
+    const { mine, ...repositoryFilters } = filters;
+    const resolvedFilters: TicketRepositoryFilters = {
+      ...repositoryFilters,
+      ...(mine ? { mineUserId: currentUserId } : {}),
+    };
+    const tickets = await this.ticketRepository.findAll(resolvedFilters);
     return tickets.map(toTicketResponse);
   }
 }

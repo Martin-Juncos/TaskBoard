@@ -25,7 +25,36 @@ export function validateTicketListFilters(input: unknown): TicketListFilters {
     status: optionalFilter(query.status, "status", TICKET_STATUSES),
     priority: optionalFilter(query.priority, "priority", TICKET_PRIORITIES),
     type: optionalFilter(query.type, "type", TICKET_TYPES),
+    assigneeId: optionalAssigneeId(query.assigneeId),
+    mine: optionalBoolean(query.mine, "mine"),
+    unassigned: optionalBoolean(query.unassigned, "unassigned"),
   };
+}
+
+// Valida el ID del responsable como entero positivo sin aceptar coerciones ambiguas.
+function optionalAssigneeId(value: unknown): number | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) {
+    throw new HttpError(400, "FILTRO_INVALIDO", "El filtro assigneeId debe ser un entero positivo.");
+  }
+  const id = Number(value.trim());
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new HttpError(400, "FILTRO_INVALIDO", "El filtro assigneeId debe ser un entero positivo.");
+  }
+  return id;
+}
+
+// Lee los filtros activables como true/false y rechaza cualquier otro valor.
+function optionalBoolean(value: unknown, name: string): boolean | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string") {
+    throw new HttpError(400, "FILTRO_INVALIDO", `El filtro ${name} debe ser true o false.`);
+  }
+  const normalizedValue = value.trim().toLowerCase();
+  if (normalizedValue !== "true" && normalizedValue !== "false") {
+    throw new HttpError(400, "FILTRO_INVALIDO", `El filtro ${name} debe ser true o false.`);
+  }
+  return normalizedValue === "true";
 }
 
 // Valida que cada filtro sea un único valor admitido o que no se haya enviado.

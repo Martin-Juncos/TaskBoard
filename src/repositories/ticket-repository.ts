@@ -1,6 +1,6 @@
 import { Op, type ModelStatic, type WhereOptions } from "sequelize";
 import type { Ticket } from "../models/ticket";
-import type { TicketListFilters } from "../types/ticket-filters";
+import type { TicketRepositoryFilters } from "../types/ticket-filters";
 
 // Expone la consulta mínima del modelo que necesita el repositorio de tickets.
 export type TicketRepositoryModel = ModelStatic<Ticket>;
@@ -38,16 +38,17 @@ export class TicketRepository {
   }
 
   // Busca en título o descripción sin distinguir mayúsculas y devuelve resultados ordenados por ID.
-  findAll(filters: TicketListFilters = {}): Promise<Ticket[]> {
+  findAll(filters: TicketRepositoryFilters = {}): Promise<Ticket[]> {
     const escapedSearch = filters.search?.replace(/[\\%_]/g, "\\$&");
-    const hasFilters = Boolean(escapedSearch || filters.status || filters.priority || filters.type);
-    const where: WhereOptions<Ticket> = {};
-
-    if (filters.status) Object.assign(where, { status: filters.status });
-    if (filters.priority) Object.assign(where, { priority: filters.priority });
-    if (filters.type) Object.assign(where, { type: filters.type });
+    const conditions: WhereOptions<Ticket>[] = [];
+    if (filters.status) conditions.push({ status: filters.status });
+    if (filters.priority) conditions.push({ priority: filters.priority });
+    if (filters.type) conditions.push({ type: filters.type });
+    if (filters.assigneeId !== undefined) conditions.push({ assigneeId: filters.assigneeId });
+    if (filters.mineUserId !== undefined) conditions.push({ assigneeId: filters.mineUserId });
+    if (filters.unassigned) conditions.push({ assigneeId: null });
     if (escapedSearch) {
-      Object.assign(where, {
+      conditions.push({
         [Op.or]: [
           { title: { [Op.iLike]: `%${escapedSearch}%` } },
           { description: { [Op.iLike]: `%${escapedSearch}%` } },
@@ -55,6 +56,7 @@ export class TicketRepository {
       });
     }
 
-    return this.ticketModel.findAll({ where: hasFilters ? where : undefined, order: [["id", "ASC"]] });
+    const where: WhereOptions<Ticket> | undefined = conditions.length > 0 ? { [Op.and]: conditions } : undefined;
+    return this.ticketModel.findAll({ where, order: [["id", "ASC"]] });
   }
 }
