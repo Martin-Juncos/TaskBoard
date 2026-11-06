@@ -17,7 +17,8 @@ test("ChangeUserRoleService exige admin antes de persistir", async () => {
 
   await assert.rejects(
     service.execute("2", "admin", { id: 2, role: "developer" }),
-    (error: unknown) => error instanceof HttpError && error.statusCode === 403 && error.code === "PERMISO_DENEGADO",
+    (error: unknown) =>
+      error instanceof HttpError && error.statusCode === 403 && error.code === "PERMISO_DENEGADO",
   );
   assert.equal(updateCalled, false);
 });
@@ -25,12 +26,13 @@ test("ChangeUserRoleService exige admin antes de persistir", async () => {
 // Permite al administrador continuar con la validación y el cambio de rol existente.
 test("ChangeUserRoleService permite admin", async () => {
   const service = new ChangeUserRoleService({
-    updateRole: async (id: number, role: "admin" | "developer") => ({
-      id,
-      name: "Dev",
-      email: "dev@example.com",
-      role,
-    }) as User,
+    updateRole: async (id: number, role: "admin" | "developer") =>
+      ({
+        id,
+        name: "Dev",
+        email: "dev@example.com",
+        role,
+      }) as User,
   } as Pick<UserRepository, "updateRole">);
 
   const user = await service.execute("2", "admin", { id: 1, role: "admin" });

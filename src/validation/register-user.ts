@@ -1,5 +1,6 @@
 import { HttpError } from "../errors/http-error";
 import { normalizeEmail } from "./email";
+import { isRecord } from "./is-record";
 
 export interface RegisterUserInput {
   name: string;
@@ -9,7 +10,7 @@ export interface RegisterUserInput {
 
 // Valida y normaliza los datos públicos de registro sin aceptar un rol enviado por el cliente.
 export function validateRegisterUserInput(input: unknown): RegisterUserInput {
-  const body = isObject(input) ? input : {};
+  const body = isRecord(input) ? input : {};
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const email = typeof body.email === "string" ? body.email : "";
   const password = typeof body.password === "string" ? body.password : "";
@@ -34,9 +35,4 @@ export function validateRegisterUserInput(input: unknown): RegisterUserInput {
     email: normalizeEmail(email),
     password,
   };
-}
-
-// Comprueba que el cuerpo sea un objeto antes de leer sus campos.
-function isObject(input: unknown): input is Record<string, unknown> {
-  return typeof input === "object" && input !== null && !Array.isArray(input);
 }

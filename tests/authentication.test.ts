@@ -11,24 +11,33 @@ const testSettings = {
   jwtSecret: "clave-de-prueba-larga-y-local",
   jwtExpiresIn: "1h",
 };
-const users = new Map<number, User>([[7, {
-  id: 7,
-  name: "Admin actual",
-  email: "admin@example.com",
-  passwordHash: "hash-privado",
-  role: "admin",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-} as User]]);
+const users = new Map<number, User>([
+  [
+    7,
+    {
+      id: 7,
+      name: "Admin actual",
+      email: "admin@example.com",
+      passwordHash: "hash-privado",
+      role: "admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as User,
+  ],
+]);
 
 // Inyecta una búsqueda falsa para probar el middleware sin conectarse a PostgreSQL.
 const repository = {
   findById: async (id: number) => users.get(id) ?? null,
 };
 const app = express();
-app.get("/privado", createAuthenticationMiddleware(repository, testSettings), (request, response) => {
-  response.json(request.user);
-});
+app.get(
+  "/privado",
+  createAuthenticationMiddleware(repository, testSettings),
+  (request, response) => {
+    response.json(request.user);
+  },
+);
 app.use(errorHandler);
 
 let baseUrl: string;
@@ -95,10 +104,13 @@ test("rechaza un token vencido", async () => {
 
 // Rechaza un token cuya firma no corresponde al secreto configurado.
 test("rechaza un token con firma inválida", async () => {
-  const token = signAccessToken({ userId: 7, role: "admin" }, {
-    ...testSettings,
-    jwtSecret: "otro-secreto-distinto",
-  });
+  const token = signAccessToken(
+    { userId: 7, role: "admin" },
+    {
+      ...testSettings,
+      jwtSecret: "otro-secreto-distinto",
+    },
+  );
   const response = await fetch(`${baseUrl}/privado`, {
     headers: { Authorization: `Bearer ${token}` },
   });

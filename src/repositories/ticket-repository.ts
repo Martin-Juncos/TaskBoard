@@ -69,7 +69,8 @@ export class TicketRepository {
       });
     }
 
-    const where: WhereOptions<Ticket> | undefined = conditions.length > 0 ? { [Op.and]: conditions } : undefined;
+    const where: WhereOptions<Ticket> | undefined =
+      conditions.length > 0 ? { [Op.and]: conditions } : undefined;
     return this.ticketModel.findAll({ where, order: [["id", "ASC"]] });
   }
 }

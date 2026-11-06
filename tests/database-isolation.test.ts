@@ -38,84 +38,22 @@ before(async () => {
 
   // Hace que el singleton de Sequelize usado por los modelos apunte a taskboard_test.
   process.env.DATABASE_URL = testDatabaseUrl;
-  const databaseModule = await import("../src/database/sequelize");
+  const databaseModule = await import("../src/database/sequelize.js");
   sequelize = databaseModule.sequelize;
-  User = (await import("../src/models/user")).User;
-  Ticket = (await import("../src/models/ticket")).Ticket;
+  User = (await import("../src/models/user.js")).User;
+  Ticket = (await import("../src/models/ticket.js")).Ticket;
   await sequelize.authenticate();
 
-  // Monta la API con repositorios Sequelize reales para probar rutas y persistencia juntas.
-  const [
-    { createApp },
-    { createAuthenticationMiddleware },
-    { createLoginUserController, createRegisterUserController },
-    { createChangeUserRoleController, createListUsersController },
-    {
-      createCreateTicketController,
-      createDeleteTicketController,
-      createGetTicketController,
-      createListTicketsController,
-      createRegenerateTicketSuggestionsController,
-      createUpdateTicketController,
-      createUpdateTicketStatusController,
-    },
-    { UserRepository },
-    { TicketRepository },
-    { LoginUserService },
-    { RegisterUserService },
-    { ChangeUserRoleService, ListUsersService },
-    {
-      CreateTicketService,
-      DeleteTicketService,
-      GetTicketService,
-      ListTicketsService,
-      RegenerateTicketSuggestionsService,
-      UpdateTicketService,
-      UpdateTicketStatusService,
-    },
-  ] = await Promise.all([
-    import("../src/app"),
-    import("../src/middleware/authentication"),
-    import("../src/controllers/auth-controller"),
-    import("../src/controllers/user-controller"),
-    import("../src/controllers/ticket-controller"),
-    import("../src/repositories/user-repository"),
-    import("../src/repositories/ticket-repository"),
-    import("../src/services/login-user-service"),
-    import("../src/services/register-user-service"),
-    import("../src/services/user-service"),
-    import("../src/services/ticket-service"),
-  ]);
-  const userRepository = new UserRepository(User);
-  const ticketRepository = new TicketRepository(Ticket);
-  const authenticate = createAuthenticationMiddleware(userRepository, jwtSettings);
-  const app = createApp({
-    register: createRegisterUserController(new RegisterUserService(userRepository)),
-    login: createLoginUserController(new LoginUserService(userRepository, jwtSettings)),
-    users: {
-      authenticate,
-      list: createListUsersController(new ListUsersService(userRepository)),
-      updateRole: createChangeUserRoleController(new ChangeUserRoleService(userRepository)),
-    },
-    tickets: {
-      authenticate,
-      create: createCreateTicketController(new CreateTicketService(ticketRepository)),
-      update: createUpdateTicketController(new UpdateTicketService(ticketRepository)),
-      regenerateSuggestions: createRegenerateTicketSuggestionsController(
-        new RegenerateTicketSuggestionsService(ticketRepository),
-      ),
-      updateStatus: createUpdateTicketStatusController(new UpdateTicketStatusService(ticketRepository)),
-      delete: createDeleteTicketController(new DeleteTicketService(ticketRepository)),
-      findById: createGetTicketController(new GetTicketService(ticketRepository)),
-      list: createListTicketsController(new ListTicketsService(ticketRepository)),
-    },
-  });
-  server = app.listen(0);
+  // Usa el mismo armado de repositorios y servicios que el servidor de desarrollo.
+  const { createApplication } = await import("../src/create-application.js");
+  const app = createApplication(jwtSettings);
+  const testServer = app.listen(0);
+  server = testServer;
   await new Promise<void>((resolve, reject) => {
-    server?.once("listening", resolve);
-    server?.once("error", reject);
+    testServer.once("listening", resolve);
+    testServer.once("error", reject);
   });
-  const address = server.address();
+  const address = testServer.address();
   assert.ok(address && typeof address !== "string");
   baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
 });
@@ -129,7 +67,7 @@ beforeEach(async () => {
 after(async () => {
   if (server) {
     await new Promise<void>((resolve, reject) => {
-      server?.close((error) => error ? reject(error) : resolve());
+      server?.close((error) => (error ? reject(error) : resolve()));
     });
   }
   await sequelize?.close();
@@ -210,7 +148,10 @@ test("registro y login persisten usuarios y validan credenciales", async () => {
   assert.equal(protectedWithoutToken.response.status, 401);
   const protectedWithToken = await apiRequest("/api/users", "GET", undefined, token);
   assert.equal(protectedWithToken.response.status, 200);
-  assert.equal("passwordHash" in (protectedWithToken.body as Array<Record<string, unknown>>)[0], false);
+  assert.equal(
+    "passwordHash" in (protectedWithToken.body as Array<Record<string, unknown>>)[0],
+    false,
+  );
 });
 
 // Comprueba en las rutas reales que los permisos se apliquen entre distintos usuarios.
@@ -228,16 +169,36 @@ test("permisos de tickets y roles se respetan con usuarios persistidos", async (
   assert.equal(ticket.response.status, 201);
   const ticketId = (ticket.body as { id: number }).id;
 
-  const unauthorizedEdit = await apiRequest(`/api/tickets/${ticketId}`, "PUT", { title: "No autorizado" }, otherDeveloper.token);
+  const unauthorizedEdit = await apiRequest(
+    `/api/tickets/${ticketId}`,
+    "PUT",
+    { title: "No autorizado" },
+    otherDeveloper.token,
+  );
   assert.equal(unauthorizedEdit.response.status, 403);
 
   // El responsable toma primero el ticket libre; desde ahí el otro developer no puede cambiarle el estado.
-  const claim = await apiRequest(`/api/tickets/${ticketId}/status`, "PATCH", { status: "in_progress" }, owner.token);
+  const claim = await apiRequest(
+    `/api/tickets/${ticketId}/status`,
+    "PATCH",
+    { status: "in_progress" },
+    owner.token,
+  );
   assert.equal(claim.response.status, 200);
-  const unauthorizedStatus = await apiRequest(`/api/tickets/${ticketId}/status`, "PATCH", { status: "blocked" }, otherDeveloper.token);
+  const unauthorizedStatus = await apiRequest(
+    `/api/tickets/${ticketId}/status`,
+    "PATCH",
+    { status: "blocked" },
+    otherDeveloper.token,
+  );
   assert.equal(unauthorizedStatus.response.status, 403);
 
-  const unauthorizedDelete = await apiRequest(`/api/tickets/${ticketId}`, "DELETE", undefined, otherDeveloper.token);
+  const unauthorizedDelete = await apiRequest(
+    `/api/tickets/${ticketId}`,
+    "DELETE",
+    undefined,
+    otherDeveloper.token,
+  );
   assert.equal(unauthorizedDelete.response.status, 403);
   const unauthorizedRoleChange = await apiRequest(
     `/api/users/${owner.id}/role`,
@@ -247,11 +208,21 @@ test("permisos de tickets y roles se respetan con usuarios persistidos", async (
   );
   assert.equal(unauthorizedRoleChange.response.status, 403);
 
-  const adminRoleChange = await apiRequest(`/api/users/${otherDeveloper.id}/role`, "PATCH", { role: "admin" }, admin.token);
+  const adminRoleChange = await apiRequest(
+    `/api/users/${otherDeveloper.id}/role`,
+    "PATCH",
+    { role: "admin" },
+    admin.token,
+  );
   assert.equal(adminRoleChange.response.status, 200);
   assert.equal((adminRoleChange.body as { role: string }).role, "admin");
 
-  const adminEdit = await apiRequest(`/api/tickets/${ticketId}`, "PUT", { priority: "high" }, admin.token);
+  const adminEdit = await apiRequest(
+    `/api/tickets/${ticketId}`,
+    "PUT",
+    { priority: "high" },
+    admin.token,
+  );
   assert.equal(adminEdit.response.status, 200);
 });
 
@@ -342,8 +313,18 @@ test("filtros, alertas y sugerencias usan tickets persistidos", async () => {
   const overdueId = (overdue.body as { id: number }).id;
   const completedId = (completed.body as { id: number }).id;
 
-  const overdueDetail = await apiRequest(`/api/tickets/${overdueId}`, "GET", undefined, developer.token);
-  const completedDetail = await apiRequest(`/api/tickets/${completedId}`, "GET", undefined, developer.token);
+  const overdueDetail = await apiRequest(
+    `/api/tickets/${overdueId}`,
+    "GET",
+    undefined,
+    developer.token,
+  );
+  const completedDetail = await apiRequest(
+    `/api/tickets/${completedId}`,
+    "GET",
+    undefined,
+    developer.token,
+  );
   assert.equal((overdueDetail.body as Record<string, unknown>).alert, true);
   assert.equal((completedDetail.body as Record<string, unknown>).alert, false);
 
@@ -355,18 +336,37 @@ test("filtros, alertas y sugerencias usan tickets persistidos", async () => {
   );
   const filteredTickets = filtered.body as Array<Record<string, unknown>>;
   assert.equal(filtered.response.status, 200);
-  assert.deepEqual(filteredTickets.map((ticket) => ticket.id), [overdueId]);
+  assert.deepEqual(
+    filteredTickets.map((ticket) => ticket.id),
+    [overdueId],
+  );
   assert.equal(filteredTickets[0].branchName, "feature/implementar-busqueda-avanzada");
   assert.equal(filteredTickets[0].commitType, "feat");
 
-  const hostingSearch = await apiRequest("/api/tickets?search=hosting", "GET", undefined, developer.token);
-  assert.deepEqual((hostingSearch.body as Array<{ id: number }>).map((ticket) => ticket.id), [
-    (future.body as { id: number }).id,
-  ]);
+  const hostingSearch = await apiRequest(
+    "/api/tickets?search=hosting",
+    "GET",
+    undefined,
+    developer.token,
+  );
+  assert.deepEqual(
+    (hostingSearch.body as Array<{ id: number }>).map((ticket) => ticket.id),
+    [(future.body as { id: number }).id],
+  );
 
-  const unassigned = await apiRequest("/api/tickets?unassigned=true", "GET", undefined, developer.token);
+  const unassigned = await apiRequest(
+    "/api/tickets?unassigned=true",
+    "GET",
+    undefined,
+    developer.token,
+  );
   assert.equal((unassigned.body as unknown[]).length, 3);
-  const statusChanged = await apiRequest(`/api/tickets/${overdueId}/status`, "PATCH", { status: "in_progress" }, developer.token);
+  const statusChanged = await apiRequest(
+    `/api/tickets/${overdueId}/status`,
+    "PATCH",
+    { status: "in_progress" },
+    developer.token,
+  );
   assert.equal(statusChanged.response.status, 200);
 
   const byAssignee = await apiRequest(
@@ -375,7 +375,10 @@ test("filtros, alertas y sugerencias usan tickets persistidos", async () => {
     undefined,
     developer.token,
   );
-  assert.deepEqual((byAssignee.body as Array<{ id: number }>).map((ticket) => ticket.id), [overdueId]);
+  assert.deepEqual(
+    (byAssignee.body as Array<{ id: number }>).map((ticket) => ticket.id),
+    [overdueId],
+  );
 });
 
 // Extrae el nombre de la base de una URI sin mostrar credenciales ni otros datos de conexión.
@@ -405,11 +408,14 @@ async function apiRequest(
     headers,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  return { response, body: await response.json() as unknown };
+  return { response, body: (await response.json()) as unknown };
 }
 
 // Registra y autentica un developer por las rutas HTTP públicas.
-async function registerAndLogin(name: string, email: string): Promise<{ id: number; token: string }> {
+async function registerAndLogin(
+  name: string,
+  email: string,
+): Promise<{ id: number; token: string }> {
   const registration = await apiRequest("/api/auth/register", "POST", {
     name,
     email,
@@ -440,7 +446,10 @@ async function createAdminAndLogin(email: string): Promise<{ id: number; token: 
 }
 
 // Crea tickets por HTTP con los campos base y las variaciones del caso de prueba.
-async function createApiTicket(token: string, fields: Record<string, unknown>): Promise<{ response: Response; body: unknown }> {
+async function createApiTicket(
+  token: string,
+  fields: Record<string, unknown>,
+): Promise<{ response: Response; body: unknown }> {
   return apiRequest(
     "/api/tickets",
     "POST",

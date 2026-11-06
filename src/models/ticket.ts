@@ -6,7 +6,18 @@ import {
   Model,
 } from "sequelize";
 import { sequelize } from "../database/sequelize";
-import { BRANCH_TYPES, COMMIT_TYPES, TICKET_PRIORITIES, TICKET_STATUSES, TICKET_TYPES, type BranchType, type CommitType, type TicketPriority, type TicketStatus, type TicketType } from "../types/ticket-enums";
+import {
+  BRANCH_TYPES,
+  COMMIT_TYPES,
+  TICKET_PRIORITIES,
+  TICKET_STATUSES,
+  TICKET_TYPES,
+  type BranchType,
+  type CommitType,
+  type TicketPriority,
+  type TicketStatus,
+  type TicketType,
+} from "../types/ticket-enums";
 import { User } from "./user";
 
 // Representa un ticket del tablero con sus datos de trabajo, relaciones y sugerencias Git.
@@ -35,15 +46,35 @@ Ticket.init(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     title: { type: DataTypes.STRING(200), allowNull: false },
     description: { type: DataTypes.TEXT, allowNull: true },
-    type: { type: DataTypes.STRING(30), allowNull: false, validate: { isIn: [Array.from(TICKET_TYPES)] } },
-    priority: { type: DataTypes.STRING(20), allowNull: false, validate: { isIn: [Array.from(TICKET_PRIORITIES)] } },
-    status: { type: DataTypes.STRING(30), allowNull: false, validate: { isIn: [Array.from(TICKET_STATUSES)] } },
+    type: {
+      type: DataTypes.STRING(30),
+      allowNull: false,
+      validate: { isIn: [Array.from(TICKET_TYPES)] },
+    },
+    priority: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      validate: { isIn: [Array.from(TICKET_PRIORITIES)] },
+    },
+    status: {
+      type: DataTypes.STRING(30),
+      allowNull: false,
+      validate: { isIn: [Array.from(TICKET_STATUSES)] },
+    },
     dueDate: { type: DataTypes.DATEONLY, allowNull: false },
     createdById: { type: DataTypes.INTEGER, allowNull: false },
     assigneeId: { type: DataTypes.INTEGER, allowNull: true },
-    branchType: { type: DataTypes.STRING(30), allowNull: true, validate: { isIn: [Array.from(BRANCH_TYPES)] } },
+    branchType: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      validate: { isIn: [Array.from(BRANCH_TYPES)] },
+    },
     branchName: { type: DataTypes.STRING(255), allowNull: true },
-    commitType: { type: DataTypes.STRING(30), allowNull: true, validate: { isIn: [Array.from(COMMIT_TYPES)] } },
+    commitType: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      validate: { isIn: [Array.from(COMMIT_TYPES)] },
+    },
     commitScope: { type: DataTypes.STRING(100), allowNull: true },
     commitDescription: { type: DataTypes.STRING(255), allowNull: true },
     createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },

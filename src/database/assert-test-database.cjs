@@ -5,7 +5,9 @@ function assertIsolatedTestDatabase() {
   const testDatabaseUrl = process.env.DATABASE_URL_TEST?.trim();
   const developmentDatabaseUrl = process.env.DATABASE_URL?.trim();
   if (!testDatabaseUrl) {
-    throw new Error("Falta DATABASE_URL_TEST; no se ejecutarán migraciones ni pruebas de base de datos.");
+    throw new Error(
+      "Falta DATABASE_URL_TEST; no se ejecutarán migraciones ni pruebas de base de datos.",
+    );
   }
 
   const testIdentity = databaseIdentity(testDatabaseUrl);
@@ -15,7 +17,10 @@ function assertIsolatedTestDatabase() {
   }
   if (developmentDatabaseUrl) {
     const developmentName = databaseName(developmentDatabaseUrl).toLowerCase();
-    if (testName.toLowerCase() === developmentName || testIdentity === databaseIdentity(developmentDatabaseUrl)) {
+    if (
+      testName.toLowerCase() === developmentName ||
+      testIdentity === databaseIdentity(developmentDatabaseUrl)
+    ) {
       throw new Error("DATABASE_URL_TEST debe apuntar a una base distinta de DATABASE_URL.");
     }
   }

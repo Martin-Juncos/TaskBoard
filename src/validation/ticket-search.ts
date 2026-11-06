@@ -1,6 +1,7 @@
 import { HttpError } from "../errors/http-error";
 import { TICKET_PRIORITIES, TICKET_STATUSES, TICKET_TYPES } from "../types/ticket-enums";
 import type { TicketListFilters } from "../types/ticket-filters";
+import { isRecord } from "./is-record";
 
 // Valida y normaliza el término opcional usado para buscar tickets.
 export function validateTicketSearch(value: unknown): string | undefined {
@@ -12,14 +13,18 @@ export function validateTicketSearch(value: unknown): string | undefined {
   const search = value.trim();
   if (!search) return undefined;
   if (search.length > 200) {
-    throw new HttpError(400, "BUSQUEDA_INVALIDA", "El parámetro search no puede superar 200 caracteres.");
+    throw new HttpError(
+      400,
+      "BUSQUEDA_INVALIDA",
+      "El parámetro search no puede superar 200 caracteres.",
+    );
   }
   return search;
 }
 
 // Valida de una vez todos los filtros opcionales del listado de tickets.
 export function validateTicketListFilters(input: unknown): TicketListFilters {
-  const query = isObject(input) ? input : {};
+  const query = isRecord(input) ? input : {};
   return {
     search: validateTicketSearch(query.search),
     status: optionalFilter(query.status, "status", TICKET_STATUSES),
@@ -45,11 +50,19 @@ function optionalGroupBy(value: unknown): "status" | undefined {
 function optionalAssigneeId(value: unknown): number | undefined {
   if (value === undefined || value === "") return undefined;
   if (typeof value !== "string" || !/^\d+$/.test(value.trim())) {
-    throw new HttpError(400, "FILTRO_INVALIDO", "El filtro assigneeId debe ser un entero positivo.");
+    throw new HttpError(
+      400,
+      "FILTRO_INVALIDO",
+      "El filtro assigneeId debe ser un entero positivo.",
+    );
   }
   const id = Number(value.trim());
   if (!Number.isSafeInteger(id) || id <= 0) {
-    throw new HttpError(400, "FILTRO_INVALIDO", "El filtro assigneeId debe ser un entero positivo.");
+    throw new HttpError(
+      400,
+      "FILTRO_INVALIDO",
+      "El filtro assigneeId debe ser un entero positivo.",
+    );
   }
   return id;
 }
@@ -68,7 +81,11 @@ function optionalBoolean(value: unknown, name: string): boolean | undefined {
 }
 
 // Valida que cada filtro sea un único valor admitido o que no se haya enviado.
-function optionalFilter<T extends string>(value: unknown, name: string, allowed: readonly T[]): T | undefined {
+function optionalFilter<T extends string>(
+  value: unknown,
+  name: string,
+  allowed: readonly T[],
+): T | undefined {
   if (value === undefined || value === "") return undefined;
   if (typeof value !== "string") {
     throw new HttpError(400, "FILTRO_INVALIDO", `El filtro ${name} debe ser un único texto.`);
@@ -80,9 +97,4 @@ function optionalFilter<T extends string>(value: unknown, name: string, allowed:
     throw new HttpError(400, "FILTRO_INVALIDO", `El valor enviado para ${name} no es válido.`);
   }
   return normalizedValue as T;
-}
-
-// Asegura que los parámetros leídos sean un objeto antes de acceder a sus propiedades.
-function isObject(input: unknown): input is Record<string, unknown> {
-  return typeof input === "object" && input !== null && !Array.isArray(input);
 }

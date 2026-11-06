@@ -4,6 +4,7 @@ node_modules/
 # Salidas de compilación y pruebas
 dist/
 coverage/
+.eslintcache
 
 # Variables de entorno y secretos
 .env

@@ -11,7 +11,10 @@ async function checkDatabaseConnection(): Promise<void> {
     console.log("Conexión con PostgreSQL establecida correctamente.");
   } catch (error) {
     // Muestra el problema de configuración directamente y evita imprimir detalles internos del driver.
-    if (error instanceof Error && error.message.startsWith("Falta la variable de entorno obligatoria:")) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("Falta la variable de entorno obligatoria:")
+    ) {
       console.error(error.message);
     } else {
       console.error(
