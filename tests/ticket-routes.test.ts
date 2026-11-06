@@ -201,6 +201,30 @@ test("GET /api/tickets lista todo sin un término de búsqueda", async () => {
   assert.deepEqual(body.map((ticket) => ticket.id), [7, 8, 9]);
 });
 
+// Devuelve una columna por estado y mantiene vacías las columnas sin tickets.
+test("GET /api/tickets?groupBy=status agrupa tickets por estado", async () => {
+  const response = await fetch(`${baseUrl}/api/tickets?groupBy=status`, { headers: authorizationHeaders() });
+  const body = (await response.json()) as Record<string, Array<{ id: number }>>;
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(Object.keys(body), ["pending", "in_progress", "in_review", "completed", "blocked"]);
+  assert.deepEqual(body.pending.map((ticket) => ticket.id), [7, 8]);
+  assert.deepEqual(body.blocked.map((ticket) => ticket.id), [9]);
+  assert.deepEqual(body.completed, []);
+});
+
+// Agrupa después de aplicar los filtros existentes, sin perder las columnas vacías.
+test("GET /api/tickets combina agrupación y filtros", async () => {
+  const response = await fetch(`${baseUrl}/api/tickets?groupBy=status&status=blocked&unassigned=true`, {
+    headers: authorizationHeaders(),
+  });
+  const body = (await response.json()) as Record<string, Array<{ id: number }>>;
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.blocked.map((ticket) => ticket.id), [9]);
+  assert.deepEqual(body.pending, []);
+});
+
 // Busca sin distinguir mayúsculas y encuentra coincidencias en el título o la descripción.
 test("GET /api/tickets?search busca en título y descripción", async () => {
   const titleResponse = await fetch(`${baseUrl}/api/tickets?search=AGREGAR`, { headers: authorizationHeaders() });
@@ -266,6 +290,8 @@ test("GET /api/tickets valida los filtros", async () => {
     "assigneeId=44&assigneeId=45",
     "mine=yes",
     "unassigned=1",
+    "groupBy=priority",
+    "groupBy=status&groupBy=status",
   ];
   for (const query of invalidQueries) {
     const response = await fetch(`${baseUrl}/api/tickets?${query}`, { headers: authorizationHeaders() });

@@ -28,7 +28,17 @@ export function validateTicketListFilters(input: unknown): TicketListFilters {
     assigneeId: optionalAssigneeId(query.assigneeId),
     mine: optionalBoolean(query.mine, "mine"),
     unassigned: optionalBoolean(query.unassigned, "unassigned"),
+    groupBy: optionalGroupBy(query.groupBy),
   };
+}
+
+// Activa la única agrupación disponible y rechaza otros campos o valores repetidos.
+function optionalGroupBy(value: unknown): "status" | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string" || value.trim() !== "status") {
+    throw new HttpError(400, "FILTRO_INVALIDO", "groupBy solo admite el valor status.");
+  }
+  return "status";
 }
 
 // Valida el ID del responsable como entero positivo sin aceptar coerciones ambiguas.
