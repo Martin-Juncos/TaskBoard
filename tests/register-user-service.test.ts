@@ -85,12 +85,13 @@ test("responde HTTP 400 si el email ya existe", async () => {
   let hashCalls = 0;
   let createCalls = 0;
   const repository = {
-    findByEmail: async () => createFakeUser({
-      name: "Ana",
-      email: "ana@example.com",
-      passwordHash: "hash-existente",
-      role: "developer",
-    }),
+    findByEmail: async () =>
+      createFakeUser({
+        name: "Ana",
+        email: "ana@example.com",
+        passwordHash: "hash-existente",
+        role: "developer",
+      }),
     create: async (input: CreateUserRecord) => {
       createCalls += 1;
       return createFakeUser(input);

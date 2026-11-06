@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, test } from "node:test";
 import { createApp } from "../src/app";
-import { createChangeUserRoleController, createListUsersController } from "../src/controllers/user-controller";
+import {
+  createChangeUserRoleController,
+  createListUsersController,
+} from "../src/controllers/user-controller";
 import { createAuthenticationMiddleware } from "../src/middleware/authentication";
 import type { User } from "../src/models/user";
 import { ChangeUserRoleService, ListUsersService } from "../src/services/user-service";
@@ -10,8 +13,26 @@ import { signAccessToken } from "../src/utils/jwt";
 
 const settings = { jwtSecret: "secreto-local-de-pruebas", jwtExpiresIn: "1h" };
 const users = new Map<number, User>([
-  [1, { id: 1, name: "Admin", email: "admin@example.com", passwordHash: "hash-admin", role: "admin" } as User],
-  [2, { id: 2, name: "Dev", email: "dev@example.com", passwordHash: "hash-dev", role: "developer" } as User],
+  [
+    1,
+    {
+      id: 1,
+      name: "Admin",
+      email: "admin@example.com",
+      passwordHash: "hash-admin",
+      role: "admin",
+    } as User,
+  ],
+  [
+    2,
+    {
+      id: 2,
+      name: "Dev",
+      email: "dev@example.com",
+      passwordHash: "hash-dev",
+      role: "developer",
+    } as User,
+  ],
 ]);
 let baseUrl: string;
 let server: ReturnType<ReturnType<typeof createApp>["listen"]>;
@@ -47,7 +68,10 @@ before(async () => {
 
 // Cierra el servidor local de pruebas al terminar los casos.
 after(async () => {
-  if (server) await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  if (server)
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
 });
 
 // Rechaza la lista de usuarios si la solicitud no tiene una identidad autenticada.
@@ -59,7 +83,9 @@ test("GET /api/users requiere token", async () => {
 // Devuelve solo campos públicos a cualquier usuario autenticado.
 test("GET /api/users lista datos sin hashes de contraseña", async () => {
   const token = signAccessToken({ userId: 2, role: "developer" }, settings);
-  const response = await fetch(`${baseUrl}/api/users`, { headers: { Authorization: `Bearer ${token}` } });
+  const response = await fetch(`${baseUrl}/api/users`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const body = (await response.json()) as Array<Record<string, unknown>>;
   assert.equal(response.status, 200);
   assert.equal(body.length, 2);
@@ -97,10 +123,14 @@ test("PATCH /api/users/:id/role valida rol e ID existente", async () => {
   const token = signAccessToken({ userId: 1, role: "admin" }, settings);
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
   const invalidRole = await fetch(`${baseUrl}/api/users/2/role`, {
-    method: "PATCH", headers, body: JSON.stringify({ role: "owner" }),
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ role: "owner" }),
   });
   const missingUser = await fetch(`${baseUrl}/api/users/999/role`, {
-    method: "PATCH", headers, body: JSON.stringify({ role: "developer" }),
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ role: "developer" }),
   });
   assert.equal(invalidRole.status, 400);
   assert.equal(missingUser.status, 404);

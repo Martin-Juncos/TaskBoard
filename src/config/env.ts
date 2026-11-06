@@ -29,9 +29,7 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
   );
 
   if (missingVariables.length > 0) {
-    throw new Error(
-      `Faltan variables de entorno obligatorias: ${missingVariables.join(", ")}`,
-    );
+    throw new Error(`Faltan variables de entorno obligatorias: ${missingVariables.join(", ")}`);
   }
 
   return {

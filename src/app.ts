@@ -1,5 +1,4 @@
 import express from "express";
-import type { RequestHandler } from "express";
 import errorHandler from "./middleware/error-handler";
 import notFoundHandler from "./middleware/not-found-handler";
 import { createAuthRouter, type AuthRouteHandlers } from "./routes/auth-routes";

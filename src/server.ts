@@ -1,68 +1,20 @@
-import { createLoginUserController, createRegisterUserController } from "./controllers/auth-controller";
-import { createApp } from "./app";
 import { readConfig } from "./config/env";
 import { sequelize } from "./database/sequelize";
-import { User } from "./models/user";
-import { Ticket } from "./models/ticket";
-import { UserRepository } from "./repositories/user-repository";
-import { TicketRepository } from "./repositories/ticket-repository";
-import { createAuthenticationMiddleware } from "./middleware/authentication";
-import { createChangeUserRoleController, createListUsersController } from "./controllers/user-controller";
-import { createCreateTicketController, createDeleteTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController, createUpdateTicketStatusController } from "./controllers/ticket-controller";
-import { ChangeUserRoleService, ListUsersService } from "./services/user-service";
-import { LoginUserService } from "./services/login-user-service";
-import { RegisterUserService } from "./services/register-user-service";
-import { CreateTicketService, DeleteTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService, UpdateTicketStatusService } from "./services/ticket-service";
+import { createApplication } from "./create-application";
 
-// Carga y valida la configuración antes de intentar iniciar el servidor.
 const config = readConfig();
 
-// Espera la conexión a PostgreSQL y libera los recursos al detener el servidor.
+// Conecta la base, inicia HTTP y cierra ambos recursos al detener el proceso.
 async function startServer(): Promise<void> {
   try {
-    // Confirma la conexión a PostgreSQL antes de aceptar solicitudes HTTP.
     await sequelize.authenticate();
 
-    // Conecta modelo, repositorio y servicios para habilitar registro e inicio de sesión.
-    const userRepository = new UserRepository(User);
-    const ticketRepository = new TicketRepository(Ticket);
-    const registerUserService = new RegisterUserService(userRepository);
-    const loginUserService = new LoginUserService(userRepository, config);
-    const listUsersService = new ListUsersService(userRepository);
-    const changeUserRoleService = new ChangeUserRoleService(userRepository);
-    const createTicketService = new CreateTicketService(ticketRepository);
-    const updateTicketService = new UpdateTicketService(ticketRepository);
-    const regenerateTicketSuggestionsService = new RegenerateTicketSuggestionsService(ticketRepository);
-    const updateTicketStatusService = new UpdateTicketStatusService(ticketRepository);
-    const deleteTicketService = new DeleteTicketService(ticketRepository);
-    const getTicketService = new GetTicketService(ticketRepository);
-    const listTicketsService = new ListTicketsService(ticketRepository);
-    const app = createApp({
-      register: createRegisterUserController(registerUserService),
-      login: createLoginUserController(loginUserService),
-      users: {
-        authenticate: createAuthenticationMiddleware(userRepository, config),
-        list: createListUsersController(listUsersService),
-        updateRole: createChangeUserRoleController(changeUserRoleService),
-      },
-      tickets: {
-        authenticate: createAuthenticationMiddleware(userRepository, config),
-        create: createCreateTicketController(createTicketService),
-        update: createUpdateTicketController(updateTicketService),
-        regenerateSuggestions: createRegenerateTicketSuggestionsController(regenerateTicketSuggestionsService),
-        updateStatus: createUpdateTicketStatusController(updateTicketStatusService),
-        delete: createDeleteTicketController(deleteTicketService),
-        findById: createGetTicketController(getTicketService),
-        list: createListTicketsController(listTicketsService),
-      },
-    });
-
-    // Inicia el servidor usando el puerto centralizado en el módulo de configuración.
+    const app = createApplication(config);
     const server = app.listen(config.port, () => {
       console.log(`Servidor escuchando en el puerto ${config.port}`);
     });
 
-    // Cierra primero el servidor HTTP y después el pool de conexiones de Sequelize.
+    // Espera a que terminen las solicitudes activas antes de cerrar Sequelize.
     const shutdown = (signal: NodeJS.Signals): void => {
       console.log(`Señal ${signal} recibida; cerrando el servidor...`);
 
@@ -82,17 +34,14 @@ async function startServer(): Promise<void> {
       });
     };
 
-    // Atiende las señales comunes de detención en terminales y servicios.
     process.once("SIGINT", () => shutdown("SIGINT"));
     process.once("SIGTERM", () => shutdown("SIGTERM"));
   } catch {
-    // Evita iniciar HTTP si PostgreSQL no está disponible y no expone detalles internos.
     console.error("No se pudo iniciar el servidor porque falló la conexión con PostgreSQL.");
-
     await sequelize.close().catch(() => undefined);
     process.exitCode = 1;
   }
 }
 
-// Inicia el servidor de forma asíncrona para completar primero la conexión a la base.
+// Espera la conexión a PostgreSQL antes de aceptar solicitudes HTTP.
 void startServer();

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Op } from "sequelize";
 import type { Ticket } from "../src/models/ticket";
-import { TicketRepository, type TicketRepositoryModel } from "../src/repositories/ticket-repository";
+import {
+  TicketRepository,
+  type TicketRepositoryModel,
+} from "../src/repositories/ticket-repository";
 import type { CreateTicketRecord, UpdateTicketRecord } from "../src/repositories/ticket-repository";
 
 // Comprueba que la búsqueda por ID delegue en Sequelize y devuelva el ticket encontrado.
@@ -40,7 +43,11 @@ test("actualiza un ticket sin reemplazar campos omitidos", async () => {
 // Delega la eliminación al método destroy de la instancia Sequelize encontrada.
 test("elimina un ticket existente", async () => {
   let destroyed = false;
-  const ticket = { destroy: async () => { destroyed = true; } } as unknown as Ticket;
+  const ticket = {
+    destroy: async () => {
+      destroyed = true;
+    },
+  } as unknown as Ticket;
   const repository = new TicketRepository({} as TicketRepositoryModel);
 
   await repository.delete(ticket);
