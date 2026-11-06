@@ -35,7 +35,7 @@ function makeTicket(id: number, data: CreateTicketRecord): Ticket {
 before(async () => {
   tickets.set(7, makeTicket(7, {
     title: "Ticket de ejemplo",
-    description: null,
+    description: "La API falla al desplegar",
     type: "task",
     priority: "medium",
     status: "pending",
@@ -57,7 +57,10 @@ before(async () => {
       return ticket;
     },
     findById: async (id: number) => tickets.get(id) ?? null,
-    findAll: async () => [...tickets.values()].sort((left, right) => left.id - right.id),
+    findAll: async (search?: string) => [...tickets.values()]
+      .filter((ticket) => !search || ticket.title.toLowerCase().includes(search.toLowerCase()) ||
+        (ticket.description ?? "").toLowerCase().includes(search.toLowerCase()))
+      .sort((left, right) => left.id - right.id),
   };
   const app = createApp({
     tickets: {
@@ -167,11 +170,32 @@ test("GET /api/tickets/:id consulta existente y responde 404 si falta", async ()
   assert.equal(missingBody.error.code, "TICKET_NO_ENCONTRADO");
 });
 
-// Devuelve todos los tickets en orden de ID e ignora parámetros hasta implementar filtros.
-test("GET /api/tickets lista los tickets sin filtros", async () => {
-  const response = await fetch(`${baseUrl}/api/tickets?priority=urgent`, { headers: authorizationHeaders() });
+// Mantiene el listado completo cuando search no se envía o contiene solo espacios.
+test("GET /api/tickets lista todo sin un término de búsqueda", async () => {
+  const response = await fetch(`${baseUrl}/api/tickets?search=%20%20`, { headers: authorizationHeaders() });
   const body = (await response.json()) as Array<{ id: number }>;
 
   assert.equal(response.status, 200);
   assert.deepEqual(body.map((ticket) => ticket.id), [7, 8]);
+});
+
+// Busca sin distinguir mayúsculas y encuentra coincidencias en el título o la descripción.
+test("GET /api/tickets?search busca en título y descripción", async () => {
+  const titleResponse = await fetch(`${baseUrl}/api/tickets?search=AGREGAR`, { headers: authorizationHeaders() });
+  const titleResults = (await titleResponse.json()) as Array<{ id: number }>;
+  const descriptionResponse = await fetch(`${baseUrl}/api/tickets?search=API`, { headers: authorizationHeaders() });
+  const descriptionResults = (await descriptionResponse.json()) as Array<{ id: number }>;
+
+  assert.equal(titleResponse.status, 200);
+  assert.deepEqual(titleResults.map((ticket) => ticket.id), [8]);
+  assert.equal(descriptionResponse.status, 200);
+  assert.deepEqual(descriptionResults.map((ticket) => ticket.id), [7]);
+});
+
+// Rechaza términos repetidos o demasiado largos en lugar de interpretarlos ambiguamente.
+test("GET /api/tickets valida el parámetro search", async () => {
+  const repeated = await fetch(`${baseUrl}/api/tickets?search=uno&search=dos`, { headers: authorizationHeaders() });
+  const tooLong = await fetch(`${baseUrl}/api/tickets?search=${"a".repeat(201)}`, { headers: authorizationHeaders() });
+  assert.equal(repeated.status, 400);
+  assert.equal(tooLong.status, 400);
 });

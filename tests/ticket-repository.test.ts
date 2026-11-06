@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { Op } from "sequelize";
 import type { Ticket } from "../src/models/ticket";
 import { TicketRepository, type TicketRepositoryModel } from "../src/repositories/ticket-repository";
 import type { CreateTicketRecord } from "../src/repositories/ticket-repository";
@@ -54,4 +55,24 @@ test("crea tickets y lista registros en orden de ID", async () => {
   assert.equal(await repository.create(record), expected);
   assert.deepEqual(await repository.findAll(), [expected]);
   assert.deepEqual(calls, ["create:5", "findAll:id:ASC"]);
+});
+
+// Comprueba que la consulta use ILIKE en título y descripción y escape caracteres comodín.
+test("busca tickets por título o descripción con coincidencia parcial", async () => {
+  let capturedOptions: { where?: unknown; order: unknown } | undefined;
+  const model = {
+    findAll: async (options: { where?: unknown; order: unknown }) => {
+      capturedOptions = options;
+      return [];
+    },
+  } as unknown as TicketRepositoryModel;
+  const repository = new TicketRepository(model);
+
+  await repository.findAll("100%_API");
+  assert.ok(capturedOptions);
+  const where = capturedOptions.where as { [Op.or]: Array<Record<string, Record<symbol, string>>> };
+  const conditions = where[Op.or];
+  assert.equal(conditions[0].title[Op.iLike], "%100\\%\\_API%");
+  assert.equal(conditions[1].description[Op.iLike], "%100\\%\\_API%");
+  assert.deepEqual(capturedOptions.order, [["id", "ASC"]]);
 });
