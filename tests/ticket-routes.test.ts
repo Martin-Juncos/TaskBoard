@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, test } from "node:test";
 import { createApp } from "../src/app";
-import { createCreateTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController, createUpdateTicketStatusController } from "../src/controllers/ticket-controller";
+import { createCreateTicketController, createDeleteTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController, createUpdateTicketStatusController } from "../src/controllers/ticket-controller";
 import { createAuthenticationMiddleware } from "../src/middleware/authentication";
 import type { Ticket } from "../src/models/ticket";
 import type { User } from "../src/models/user";
 import type { CreateTicketRecord, UpdateTicketRecord } from "../src/repositories/ticket-repository";
 import type { TicketRepositoryFilters } from "../src/types/ticket-filters";
-import { CreateTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService, UpdateTicketStatusService } from "../src/services/ticket-service";
+import { CreateTicketService, DeleteTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService, UpdateTicketStatusService } from "../src/services/ticket-service";
 import { signAccessToken } from "../src/utils/jwt";
 
 const settings = { jwtSecret: "secreto-para-probar-tickets", jwtExpiresIn: "1h" };
@@ -40,6 +40,8 @@ function makeTicket(id: number, data: CreateTicketRecord): Ticket {
       Object.assign(ticket, changes);
       return ticket;
     },
+    // Imita la eliminación de Sequelize quitando el ticket del almacén de prueba.
+    destroy: async () => { tickets.delete(id); },
   } as unknown as Ticket;
   return ticket;
 }
@@ -86,6 +88,7 @@ before(async () => {
     },
     findById: async (id: number) => tickets.get(id) ?? null,
     update: async (ticket: Ticket, changes: UpdateTicketRecord) => ticket.update(changes),
+    delete: async (ticket: Ticket) => { await ticket.destroy(); },
     findAll: async (filters?: TicketRepositoryFilters) => [...tickets.values()]
       .filter((ticket) => !filters?.search || ticket.title.toLowerCase().includes(filters.search.toLowerCase()) ||
         (ticket.description ?? "").toLowerCase().includes(filters.search.toLowerCase()))
@@ -104,6 +107,7 @@ before(async () => {
       update: createUpdateTicketController(new UpdateTicketService(ticketRepository)),
       regenerateSuggestions: createRegenerateTicketSuggestionsController(new RegenerateTicketSuggestionsService(ticketRepository)),
       updateStatus: createUpdateTicketStatusController(new UpdateTicketStatusService(ticketRepository)),
+      delete: createDeleteTicketController(new DeleteTicketService(ticketRepository)),
       findById: createGetTicketController(new GetTicketService(ticketRepository)),
       list: createListTicketsController(new ListTicketsService(ticketRepository)),
     },
@@ -547,4 +551,77 @@ test("PATCH /api/tickets/:id/status respeta permisos", async () => {
   assert.equal(allowed.status, 200);
   assert.equal(allowedBody.status, "completed");
   assert.equal(allowedBody.completed, true);
+});
+
+// Solo un administrador puede borrar; distingue credenciales, ID inválido y ticket ausente.
+test("DELETE /api/tickets/:id controla autenticación, rol y errores", async () => {
+  const withoutToken = await fetch(`${baseUrl}/api/tickets/7`, { method: "DELETE" });
+  assert.equal(withoutToken.status, 401);
+
+  const forbidden = await fetch(`${baseUrl}/api/tickets/7`, {
+    method: "DELETE",
+    headers: authorizationHeaders(),
+  });
+  const forbiddenBody = (await forbidden.json()) as { error: { code: string } };
+  assert.equal(forbidden.status, 403);
+  assert.equal(forbiddenBody.error.code, "PERMISO_DENEGADO");
+
+  for (const [id, expectedStatus, expectedCode] of [
+    ["abc", 400, "ID_INVALIDO"],
+    ["999", 404, "TICKET_NO_ENCONTRADO"],
+  ] as const) {
+    const response = await fetch(`${baseUrl}/api/tickets/${id}`, {
+      method: "DELETE",
+      headers: authorizationHeaders(admin),
+    });
+    const body = (await response.json()) as { error: { code: string } };
+    assert.equal(response.status, expectedStatus);
+    assert.equal(body.error.code, expectedCode);
+  }
+});
+
+// Recorre el ciclo crear, consultar, actualizar y borrar usando los endpoints HTTP reales.
+test("CRUD de tickets completa el ciclo con 201, 200 y 404 final", async () => {
+  const createdResponse = await fetch(`${baseUrl}/api/tickets`, {
+    method: "POST",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: "CRUD de extremo a extremo",
+      type: "task",
+      priority: "medium",
+      status: "pending",
+      dueDate: "2099-01-01",
+    }),
+  });
+  const created = (await createdResponse.json()) as Record<string, unknown>;
+  assert.equal(createdResponse.status, 201);
+  assert.equal(typeof created.id, "number");
+  const id = created.id as number;
+
+  const foundResponse = await fetch(`${baseUrl}/api/tickets/${id}`, { headers: authorizationHeaders() });
+  const found = (await foundResponse.json()) as Record<string, unknown>;
+  assert.equal(foundResponse.status, 200);
+  assert.equal(found.title, "CRUD de extremo a extremo");
+
+  const updatedResponse = await fetch(`${baseUrl}/api/tickets/${id}`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "CRUD actualizado" }),
+  });
+  const updated = (await updatedResponse.json()) as Record<string, unknown>;
+  assert.equal(updatedResponse.status, 200);
+  assert.equal(updated.title, "CRUD actualizado");
+
+  const deletedResponse = await fetch(`${baseUrl}/api/tickets/${id}`, {
+    method: "DELETE",
+    headers: authorizationHeaders(admin),
+  });
+  const deleted = (await deletedResponse.json()) as { message: string };
+  assert.equal(deletedResponse.status, 200);
+  assert.equal(deleted.message, "Ticket eliminado correctamente.");
+
+  const missingResponse = await fetch(`${baseUrl}/api/tickets/${id}`, { headers: authorizationHeaders() });
+  const missing = (await missingResponse.json()) as { error: { code: string } };
+  assert.equal(missingResponse.status, 404);
+  assert.equal(missing.error.code, "TICKET_NO_ENCONTRADO");
 });

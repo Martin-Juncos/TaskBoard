@@ -45,6 +45,11 @@ export class TicketRepository {
     return ticket.update(changes);
   }
 
+  // Elimina de la base el ticket cargado por el servicio.
+  delete(ticket: Ticket): Promise<void> {
+    return ticket.destroy();
+  }
+
   // Busca en título o descripción sin distinguir mayúsculas y devuelve resultados ordenados por ID.
   findAll(filters: TicketRepositoryFilters = {}): Promise<Ticket[]> {
     const escapedSearch = filters.search?.replace(/[\\%_]/g, "\\$&");
