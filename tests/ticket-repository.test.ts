@@ -68,19 +68,28 @@ test("busca tickets por título o descripción con coincidencia parcial", async 
   } as unknown as TicketRepositoryModel;
   const repository = new TicketRepository(model);
 
-  await repository.findAll({ search: "100%_API", status: "pending", priority: "high", type: "bug" });
+  await repository.findAll({
+    search: "100%_API",
+    status: "pending",
+    priority: "high",
+    type: "bug",
+    assigneeId: 44,
+    mineUserId: 44,
+    unassigned: true,
+  });
   assert.ok(capturedOptions);
-  const where = capturedOptions.where as {
-    status: string;
-    priority: string;
-    type: string;
-    [Op.or]: Array<Record<string, Record<symbol, string>>>;
-  };
-  const conditions = where[Op.or];
-  assert.equal(where.status, "pending");
-  assert.equal(where.priority, "high");
-  assert.equal(where.type, "bug");
-  assert.equal(conditions[0].title[Op.iLike], "%100\\%\\_API%");
-  assert.equal(conditions[1].description[Op.iLike], "%100\\%\\_API%");
+  const where = capturedOptions.where as { [Op.and]: Array<Record<string | symbol, unknown>> };
+  const conditions = where[Op.and];
+  assert.deepEqual(conditions.slice(0, 6), [
+    { status: "pending" },
+    { priority: "high" },
+    { type: "bug" },
+    { assigneeId: 44 },
+    { assigneeId: 44 },
+    { assigneeId: null },
+  ]);
+  const search = conditions[6] as { [Op.or]: Array<Record<string, Record<symbol, string>>> };
+  assert.equal(search[Op.or][0].title[Op.iLike], "%100\\%\\_API%");
+  assert.equal(search[Op.or][1].description[Op.iLike], "%100\\%\\_API%");
   assert.deepEqual(capturedOptions.order, [["id", "ASC"]]);
 });

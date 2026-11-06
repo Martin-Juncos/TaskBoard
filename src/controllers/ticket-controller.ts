@@ -32,7 +32,7 @@ export function createGetTicketController(service: Pick<GetTicketService, "execu
 export function createListTicketsController(service: Pick<ListTicketsService, "execute">): RequestHandler {
   return async (request, response, next) => {
     try {
-      response.status(200).json(await service.execute(request.query));
+      response.status(200).json(await service.execute(request.query, request.user?.id));
     } catch (error) {
       next(error);
     }
