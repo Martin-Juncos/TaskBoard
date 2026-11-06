@@ -1,10 +1,11 @@
 import { HttpError } from "../errors/http-error";
 import type { Ticket } from "../models/ticket";
 import type { TicketRepository } from "../repositories/ticket-repository";
+import type { AuthenticatedUser } from "../types/authenticated-user";
 import type { BranchType, CommitType, TicketPriority, TicketStatus, TicketType } from "../types/ticket-enums";
 import { calculateAlert, calculateCompleted } from "../utils/ticket-derived-fields";
 import { suggestBranchName, suggestBranchType, suggestCommitType } from "../utils/ticket-suggestions";
-import { validateCreateTicketInput } from "../validation/ticket";
+import { validateCreateTicketInput, validateUpdateTicketInput } from "../validation/ticket";
 import { validateTicketListFilters } from "../validation/ticket-search";
 import type { TicketRepositoryFilters } from "../types/ticket-filters";
 
@@ -67,6 +68,43 @@ export class CreateTicketService {
     });
     return toTicketResponse(ticket);
   }
+}
+
+// Actualiza un ticket existente sin recalcular las sugerencias que ya fueron guardadas.
+export class UpdateTicketService {
+  constructor(private readonly ticketRepository: Pick<TicketRepository, "findById" | "update">) {}
+
+  async execute(idValue: unknown, input: unknown, actor: AuthenticatedUser): Promise<TicketResponse> {
+    const id = parseTicketId(idValue);
+    const changes = validateUpdateTicketInput(input);
+    const ticket = await this.ticketRepository.findById(id);
+    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+
+    // Los desarrolladores editan solo tickets propios/asignados o toman uno libre para sí mismos.
+    if (actor.role !== "admin") {
+      const ownsTicket = ticket.createdById === actor.id;
+      const isAssignee = ticket.assigneeId === actor.id;
+      const takesTicket = ticket.assigneeId === null && changes.assigneeId === actor.id;
+      if (!ownsTicket && !isAssignee && !takesTicket) throw permissionError();
+
+      // Cambiar el responsable solo permite que un desarrollador tome un ticket sin asignar.
+      if (changes.assigneeId !== undefined && changes.assigneeId !== ticket.assigneeId && !takesTicket) {
+        throw permissionError();
+      }
+      // Cambiar el estado exige estar asignado o tomar el ticket en esta misma solicitud.
+      if (changes.status !== undefined && changes.status !== ticket.status && !isAssignee && !takesTicket) {
+        throw permissionError();
+      }
+    }
+
+    const updated = await this.ticketRepository.update(ticket, changes);
+    return toTicketResponse(updated);
+  }
+}
+
+// Mantiene uniforme el error de autorización en las operaciones de edición.
+function permissionError(): HttpError {
+  return new HttpError(403, "PERMISO_DENEGADO", "No tenés permiso para editar este ticket.");
 }
 
 // Devuelve un ticket por ID y responde con 404 cuando no existe.

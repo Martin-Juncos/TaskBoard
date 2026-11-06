@@ -17,6 +17,9 @@ export interface CreateTicketInput {
   commitDescription?: string | null;
 }
 
+// En una actualización solo se modifican los campos editables enviados por el cliente.
+export type UpdateTicketInput = Partial<CreateTicketInput>;
+
 // Valida los datos públicos del ticket antes de que el servicio intente guardarlos.
 export function validateCreateTicketInput(input: unknown): CreateTicketInput {
   const body = isObject(input) ? input : {};
@@ -54,6 +57,52 @@ export function validateCreateTicketInput(input: unknown): CreateTicketInput {
     commitScope: optionalText(body, "commitScope", 100),
     commitDescription: optionalText(body, "commitDescription", 255),
   };
+}
+
+// Valida una actualización parcial sin rellenar campos omitidos ni aceptar autoría nueva.
+export function validateUpdateTicketInput(input: unknown): UpdateTicketInput {
+  const body = isObject(input) ? input : {};
+  const changes: UpdateTicketInput = {};
+
+  if (Object.hasOwn(body, "title")) {
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    if (!title || title.length > 200) {
+      throw validationError("El título es obligatorio y debe tener como máximo 200 caracteres.");
+    }
+    changes.title = title;
+  }
+  if (Object.hasOwn(body, "type")) {
+    if (!isOneOf(TICKET_TYPES, body.type)) throw validationError("El tipo debe ser feature, bug o task.");
+    changes.type = body.type;
+  }
+  if (Object.hasOwn(body, "priority")) {
+    if (!isOneOf(TICKET_PRIORITIES, body.priority)) {
+      throw validationError("La prioridad debe ser low, medium, high o urgent.");
+    }
+    changes.priority = body.priority;
+  }
+  if (Object.hasOwn(body, "status")) {
+    if (!isOneOf(TICKET_STATUSES, body.status)) throw validationError("El estado del ticket no es válido.");
+    changes.status = body.status;
+  }
+  if (Object.hasOwn(body, "dueDate")) {
+    if (typeof body.dueDate !== "string" || !isValidDateOnly(body.dueDate)) {
+      throw validationError("La fecha límite debe ser una fecha real con formato YYYY-MM-DD.");
+    }
+    changes.dueDate = body.dueDate;
+  }
+  if (Object.hasOwn(body, "description")) changes.description = optionalText(body, "description", 10000);
+  if (Object.hasOwn(body, "assigneeId")) changes.assigneeId = optionalId(body.assigneeId);
+  if (Object.hasOwn(body, "branchType")) changes.branchType = optionalEnum(body, "branchType", BRANCH_TYPES);
+  if (Object.hasOwn(body, "branchName")) changes.branchName = optionalText(body, "branchName", 255);
+  if (Object.hasOwn(body, "commitType")) changes.commitType = optionalEnum(body, "commitType", COMMIT_TYPES);
+  if (Object.hasOwn(body, "commitScope")) changes.commitScope = optionalText(body, "commitScope", 100);
+  if (Object.hasOwn(body, "commitDescription")) {
+    changes.commitDescription = optionalText(body, "commitDescription", 255);
+  }
+
+  if (Object.keys(changes).length === 0) throw validationError("Enviá al menos un campo editable del ticket.");
+  return changes;
 }
 
 // Rechaza propiedades opcionales que no sean texto, no respeten el máximo o no puedan ser nulas.
