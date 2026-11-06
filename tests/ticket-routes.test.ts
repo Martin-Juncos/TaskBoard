@@ -625,3 +625,59 @@ test("CRUD de tickets completa el ciclo con 201, 200 y 404 final", async () => {
   assert.equal(missingResponse.status, 404);
   assert.equal(missing.error.code, "TICKET_NO_ENCONTRADO");
 });
+
+// Distingue propiedad y asignación: cualquiera de las dos habilita al developer, pero ninguna otra relación.
+test("PUT /api/tickets/:id permite al developer editar solo tickets propios o asignados", async () => {
+  const makeRecord = (createdById: number, assigneeId: number | null): CreateTicketRecord => ({
+    title: "Ticket para verificar permisos",
+    description: null,
+    type: "task",
+    priority: "medium",
+    status: "pending",
+    dueDate: "2099-01-01",
+    createdById,
+    assigneeId,
+    branchType: "chore",
+    branchName: "chore/verificar-permisos",
+    commitType: "chore",
+    commitScope: null,
+    commitDescription: "Ticket para verificar permisos",
+  });
+  tickets.set(90, makeTicket(90, makeRecord(user.id, otherDeveloper.id)));
+  tickets.set(91, makeTicket(91, makeRecord(otherDeveloper.id, user.id)));
+  tickets.set(92, makeTicket(92, makeRecord(user.id, admin.id)));
+
+  const ownerEdit = await fetch(`${baseUrl}/api/tickets/90`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Editado por ser propio" }),
+  });
+  assert.equal(ownerEdit.status, 200);
+
+  const assigneeEdit = await fetch(`${baseUrl}/api/tickets/91`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Editado por estar asignado" }),
+  });
+  assert.equal(assigneeEdit.status, 200);
+
+  const unrelatedEdit = await fetch(`${baseUrl}/api/tickets/92`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(otherDeveloper), "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "No autorizado" }),
+  });
+  const deniedBody = (await unrelatedEdit.json()) as { error: { code: string } };
+  assert.equal(unrelatedEdit.status, 403);
+  assert.equal(deniedBody.error.code, "PERMISO_DENEGADO");
+
+  const adminEdit = await fetch(`${baseUrl}/api/tickets/92`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(admin), "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Editado por admin" }),
+  });
+  assert.equal(adminEdit.status, 200);
+
+  tickets.delete(90);
+  tickets.delete(91);
+  tickets.delete(92);
+});
