@@ -4,9 +4,11 @@ import errorHandler from "./middleware/error-handler";
 import notFoundHandler from "./middleware/not-found-handler";
 import { createAuthRouter, type AuthRouteHandlers } from "./routes/auth-routes";
 import { createUserRouter, type UserRouteHandlers } from "./routes/user-routes";
+import { createTicketRouter, type TicketRouteHandlers } from "./routes/ticket-routes";
 
 export interface AppRouteHandlers extends AuthRouteHandlers {
   users?: UserRouteHandlers;
+  tickets?: TicketRouteHandlers;
 }
 
 // Crea una aplicación con las rutas disponibles y los controladores de autenticación inyectados.
@@ -29,6 +31,11 @@ export function createApp(authHandlers?: AppRouteHandlers) {
   // Agrega endpoints de usuarios solo cuando se inyectan sus middlewares y controladores.
   if (authHandlers?.users) {
     app.use("/api/users", createUserRouter(authHandlers.users));
+  }
+
+  // Agrega rutas de tickets con los controladores y la autenticación configurados.
+  if (authHandlers?.tickets) {
+    app.use("/api/tickets", createTicketRouter(authHandlers.tickets));
   }
 
   // Convierte rutas no registradas en HttpError antes de que se ejecute el manejador global.
