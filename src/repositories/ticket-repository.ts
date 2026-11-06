@@ -23,6 +23,9 @@ export type CreateTicketRecord = Pick<
   | "commitDescription"
 >;
 
+// Excluye el autor para impedir que una actualización cambie la autoría del ticket.
+export type UpdateTicketRecord = Partial<Omit<CreateTicketRecord, "createdById">>;
+
 // Encapsula la búsqueda por ID para que los servicios no consulten Sequelize directamente.
 export class TicketRepository {
   constructor(private readonly ticketModel: TicketRepositoryModel) {}
@@ -35,6 +38,11 @@ export class TicketRepository {
   // Guarda los campos ya validados y devuelve el ticket creado por Sequelize.
   create(ticket: CreateTicketRecord): Promise<Ticket> {
     return this.ticketModel.create(ticket);
+  }
+
+  // Persiste solo los campos editables recibidos sobre el ticket ya encontrado.
+  update(ticket: Ticket, changes: UpdateTicketRecord): Promise<Ticket> {
+    return ticket.update(changes);
   }
 
   // Busca en título o descripción sin distinguir mayúsculas y devuelve resultados ordenados por ID.

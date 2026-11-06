@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { Op } from "sequelize";
 import type { Ticket } from "../src/models/ticket";
 import { TicketRepository, type TicketRepositoryModel } from "../src/repositories/ticket-repository";
-import type { CreateTicketRecord } from "../src/repositories/ticket-repository";
+import type { CreateTicketRecord, UpdateTicketRecord } from "../src/repositories/ticket-repository";
 
 // Comprueba que la búsqueda por ID delegue en Sequelize y devuelva el ticket encontrado.
 test("busca tickets por ID", async () => {
@@ -19,6 +19,22 @@ test("busca tickets por ID", async () => {
 
   assert.equal(await repository.findById(12), expected);
   assert.deepEqual(calls, [12]);
+});
+
+// Delega la edición a la instancia encontrada y envía solo los campos solicitados.
+test("actualiza un ticket sin reemplazar campos omitidos", async () => {
+  const changes: UpdateTicketRecord = { title: "Título nuevo" };
+  let received: UpdateTicketRecord | undefined;
+  const ticket = {
+    update: async (input: UpdateTicketRecord) => {
+      received = input;
+      return ticket;
+    },
+  } as unknown as Ticket;
+  const repository = new TicketRepository({} as TicketRepositoryModel);
+
+  assert.equal(await repository.update(ticket, changes), ticket);
+  assert.deepEqual(received, changes);
 });
 
 // Comprueba que la creación y el listado deleguen al modelo Sequelize con orden estable.
