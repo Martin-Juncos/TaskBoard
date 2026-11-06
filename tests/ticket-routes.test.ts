@@ -7,7 +7,7 @@ import { createAuthenticationMiddleware } from "../src/middleware/authentication
 import type { Ticket } from "../src/models/ticket";
 import type { User } from "../src/models/user";
 import type { CreateTicketRecord } from "../src/repositories/ticket-repository";
-import type { TicketListFilters } from "../src/types/ticket-filters";
+import type { TicketRepositoryFilters } from "../src/types/ticket-filters";
 import { CreateTicketService, GetTicketService, ListTicketsService } from "../src/services/ticket-service";
 import { signAccessToken } from "../src/utils/jwt";
 
@@ -42,7 +42,7 @@ before(async () => {
     status: "pending",
     dueDate: "2099-01-01",
     createdById: user.id,
-    assigneeId: null,
+    assigneeId: user.id,
     branchType: "chore",
     branchName: "chore/ticket-de-ejemplo",
     commitType: "chore",
@@ -73,12 +73,15 @@ before(async () => {
       return ticket;
     },
     findById: async (id: number) => tickets.get(id) ?? null,
-    findAll: async (filters?: TicketListFilters) => [...tickets.values()]
+    findAll: async (filters?: TicketRepositoryFilters) => [...tickets.values()]
       .filter((ticket) => !filters?.search || ticket.title.toLowerCase().includes(filters.search.toLowerCase()) ||
         (ticket.description ?? "").toLowerCase().includes(filters.search.toLowerCase()))
       .filter((ticket) => !filters?.status || ticket.status === filters.status)
       .filter((ticket) => !filters?.priority || ticket.priority === filters.priority)
       .filter((ticket) => !filters?.type || ticket.type === filters.type)
+      .filter((ticket) => filters?.assigneeId === undefined || ticket.assigneeId === filters.assigneeId)
+      .filter((ticket) => filters?.mineUserId === undefined || ticket.assigneeId === filters.mineUserId)
+      .filter((ticket) => !filters?.unassigned || ticket.assigneeId === null)
       .sort((left, right) => left.id - right.id),
   };
   const app = createApp({
@@ -231,6 +234,20 @@ test("GET /api/tickets combina status, priority y type", async () => {
   assert.deepEqual(combinedSearchResults.map((ticket) => ticket.id), [7]);
 });
 
+// Filtra responsable por ID, tickets asignados al usuario autenticado y tickets sin asignar.
+test("GET /api/tickets filtra responsable, mis tickets y sin asignar", async () => {
+  const byAssignee = await fetch(`${baseUrl}/api/tickets?assigneeId=${user.id}`, { headers: authorizationHeaders() });
+  const assigneeResults = (await byAssignee.json()) as Array<{ id: number }>;
+  const mine = await fetch(`${baseUrl}/api/tickets?mine=true`, { headers: authorizationHeaders() });
+  const mineResults = (await mine.json()) as Array<{ id: number }>;
+  const unassigned = await fetch(`${baseUrl}/api/tickets?unassigned=true`, { headers: authorizationHeaders() });
+  const unassignedResults = (await unassigned.json()) as Array<{ id: number }>;
+
+  assert.deepEqual(assigneeResults.map((ticket) => ticket.id), [7]);
+  assert.deepEqual(mineResults.map((ticket) => ticket.id), [7]);
+  assert.deepEqual(unassignedResults.map((ticket) => ticket.id), [8, 9]);
+});
+
 // Rechaza términos repetidos o demasiado largos en lugar de interpretarlos ambiguamente.
 test("GET /api/tickets valida el parámetro search", async () => {
   const repeated = await fetch(`${baseUrl}/api/tickets?search=uno&search=dos`, { headers: authorizationHeaders() });
@@ -245,6 +262,10 @@ test("GET /api/tickets valida los filtros", async () => {
     "status=queued",
     "priority=low&priority=high",
     "type=epic",
+    "assigneeId=0",
+    "assigneeId=44&assigneeId=45",
+    "mine=yes",
+    "unassigned=1",
   ];
   for (const query of invalidQueries) {
     const response = await fetch(`${baseUrl}/api/tickets?${query}`, { headers: authorizationHeaders() });
