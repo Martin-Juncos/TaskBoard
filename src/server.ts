@@ -7,7 +7,6 @@ import { Ticket } from "./models/ticket";
 import { UserRepository } from "./repositories/user-repository";
 import { TicketRepository } from "./repositories/ticket-repository";
 import { createAuthenticationMiddleware } from "./middleware/authentication";
-import { createRoleAuthorizationMiddleware } from "./middleware/authorize-role";
 import { createChangeUserRoleController, createListUsersController } from "./controllers/user-controller";
 import { createCreateTicketController, createDeleteTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController, createUpdateTicketStatusController } from "./controllers/ticket-controller";
 import { ChangeUserRoleService, ListUsersService } from "./services/user-service";
@@ -43,7 +42,6 @@ async function startServer(): Promise<void> {
       login: createLoginUserController(loginUserService),
       users: {
         authenticate: createAuthenticationMiddleware(userRepository, config),
-        requireAdmin: createRoleAuthorizationMiddleware("admin"),
         list: createListUsersController(listUsersService),
         updateRole: createChangeUserRoleController(changeUserRoleService),
       },

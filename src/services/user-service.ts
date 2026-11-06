@@ -1,5 +1,6 @@
 import { HttpError } from "../errors/http-error";
 import type { UserRepository } from "../repositories/user-repository";
+import type { AuthenticatedUser } from "../types/authenticated-user";
 import { isUserRole, type UserRole } from "../types/user-role";
 
 export interface PublicUser {
@@ -27,7 +28,12 @@ export class ListUsersService {
 export class ChangeUserRoleService {
   constructor(private readonly userRepository: Pick<UserRepository, "updateRole">) {}
 
-  async execute(idValue: unknown, roleValue: unknown): Promise<PublicUser> {
+  async execute(idValue: unknown, roleValue: unknown, actor: AuthenticatedUser): Promise<PublicUser> {
+    // Centraliza la regla administrativa para que el servicio también sea seguro fuera del router.
+    if (actor.role !== "admin") {
+      throw new HttpError(403, "PERMISO_DENEGADO", "Solo un administrador puede cambiar roles.");
+    }
+
     const id = typeof idValue === "string" && /^\d+$/.test(idValue) ? Number(idValue) : NaN;
     if (!Number.isSafeInteger(id) || id <= 0) {
       throw new HttpError(400, "ID_INVALIDO", "El ID debe ser un número entero positivo.");
