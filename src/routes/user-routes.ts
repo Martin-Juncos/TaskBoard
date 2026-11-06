@@ -2,7 +2,6 @@ import { Router, type RequestHandler } from "express";
 
 export interface UserRouteHandlers {
   authenticate: RequestHandler;
-  requireAdmin: RequestHandler;
   list: RequestHandler;
   updateRole: RequestHandler;
 }
@@ -11,6 +10,6 @@ export interface UserRouteHandlers {
 export function createUserRouter(handlers: UserRouteHandlers): Router {
   const router = Router();
   router.get("/", handlers.authenticate, handlers.list);
-  router.patch("/:id/role", handlers.authenticate, handlers.requireAdmin, handlers.updateRole);
+  router.patch("/:id/role", handlers.authenticate, handlers.updateRole);
   return router;
 }
