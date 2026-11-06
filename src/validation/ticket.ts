@@ -20,6 +20,13 @@ export interface CreateTicketInput {
 // En una actualización solo se modifican los campos editables enviados por el cliente.
 export type UpdateTicketInput = Partial<CreateTicketInput>;
 
+// Devuelve solo un estado permitido para la ruta específica de cambio de estado.
+export function validateTicketStatusInput(input: unknown): TicketStatus {
+  const body = isObject(input) ? input : {};
+  if (!isOneOf(TICKET_STATUSES, body.status)) throw validationError("El estado del ticket no es válido.");
+  return body.status;
+}
+
 // Valida los datos públicos del ticket antes de que el servicio intente guardarlos.
 export function validateCreateTicketInput(input: unknown): CreateTicketInput {
   const body = isObject(input) ? input : {};

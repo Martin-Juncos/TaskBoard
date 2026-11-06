@@ -5,6 +5,7 @@ export interface TicketRouteHandlers {
   create: RequestHandler;
   update: RequestHandler;
   regenerateSuggestions: RequestHandler;
+  updateStatus: RequestHandler;
   findById: RequestHandler;
   list: RequestHandler;
 }
@@ -14,6 +15,7 @@ export function createTicketRouter(handlers: TicketRouteHandlers): Router {
   const router = Router();
   router.post("/", handlers.authenticate, handlers.create);
   router.put("/:id", handlers.authenticate, handlers.update);
+  router.patch("/:id/status", handlers.authenticate, handlers.updateStatus);
   // Esta ruta cambia sugerencias guardadas solo por pedido explícito del cliente.
   router.post("/:id/regenerate-suggestions", handlers.authenticate, handlers.regenerateSuggestions);
   router.get("/", handlers.authenticate, handlers.list);
