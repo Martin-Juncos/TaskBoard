@@ -49,7 +49,6 @@ test("informa cuando falta una variable obligatoria", () => {
 // Informa todas las ausencias juntas para evitar corregirlas de una en una.
 test("informa todas las variables obligatorias ausentes", () => {
   assert.throws(() => readConfig({}), {
-    message:
-      "Faltan variables de entorno obligatorias: DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN",
+    message: "Faltan variables de entorno obligatorias: DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN",
   });
 });

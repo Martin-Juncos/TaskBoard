@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { slugifyTitle, suggestBranchName, suggestBranchType, suggestCommitType } from "../src/utils/ticket-suggestions";
+import {
+  slugifyTitle,
+  suggestBranchName,
+  suggestBranchType,
+  suggestCommitType,
+} from "../src/utils/ticket-suggestions";
 
 // Normaliza acentos, signos y espacios para obtener un fragmento apto para nombres de rama.
 test("convierte títulos a slugs", () => {

@@ -39,10 +39,7 @@ export class LoginUserService {
     }
 
     // Firma el ID y el rol persistido del usuario, sin incluir la contraseña en el token.
-    const token = this.signToken(
-      { userId: user.id, role: user.role },
-      this.jwtSettings,
-    );
+    const token = this.signToken({ userId: user.id, role: user.role }, this.jwtSettings);
 
     return { token };
   }

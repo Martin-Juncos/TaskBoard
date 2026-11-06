@@ -2,12 +2,32 @@ import { HttpError } from "../errors/http-error";
 import type { Ticket } from "../models/ticket";
 import type { TicketRepository } from "../repositories/ticket-repository";
 import type { AuthenticatedUser } from "../types/authenticated-user";
-import type { BranchType, CommitType, TicketPriority, TicketStatus, TicketType } from "../types/ticket-enums";
+import type {
+  BranchType,
+  CommitType,
+  TicketPriority,
+  TicketStatus,
+  TicketType,
+} from "../types/ticket-enums";
 import { calculateAlert, calculateCompleted } from "../utils/ticket-derived-fields";
-import { suggestBranchName, suggestBranchType, suggestCommitType } from "../utils/ticket-suggestions";
-import { validateCreateTicketInput, validateTicketStatusInput, validateUpdateTicketInput } from "../validation/ticket";
+import {
+  suggestBranchName,
+  suggestBranchType,
+  suggestCommitType,
+} from "../utils/ticket-suggestions";
+import {
+  validateCreateTicketInput,
+  validateTicketStatusInput,
+  validateUpdateTicketInput,
+} from "../validation/ticket";
 import { validateTicketListFilters } from "../validation/ticket-search";
 import type { TicketRepositoryFilters } from "../types/ticket-filters";
+import {
+  assertCanDeleteTicket,
+  assertCanRegenerateTicketSuggestions,
+  assertCanUpdateTicket,
+  assertCanUpdateTicketStatus,
+} from "./ticket-authorization";
 
 // Define los campos públicos de ticket y agrega las propiedades que se calculan al consultar.
 export interface TicketResponse {
@@ -53,18 +73,34 @@ export class CreateTicketService {
 
   async execute(input: unknown, createdById: number): Promise<TicketResponse> {
     if (!Number.isSafeInteger(createdById) || createdById <= 0) {
-      throw new HttpError(401, "USUARIO_NO_AUTENTICADO", "Se requiere iniciar sesión para crear tickets.");
+      throw new HttpError(
+        401,
+        "USUARIO_NO_AUTENTICADO",
+        "Se requiere iniciar sesión para crear tickets.",
+      );
     }
 
     const ticketInput = validateCreateTicketInput(input);
     const ticket = await this.ticketRepository.create({
       ...ticketInput,
       createdById,
-      branchType: ticketInput.branchType === undefined ? suggestBranchType(ticketInput.type) : ticketInput.branchType,
-      branchName: ticketInput.branchName === undefined ? suggestBranchName(ticketInput.type, ticketInput.title) : ticketInput.branchName,
-      commitType: ticketInput.commitType === undefined ? suggestCommitType(ticketInput.type) : ticketInput.commitType,
+      branchType:
+        ticketInput.branchType === undefined
+          ? suggestBranchType(ticketInput.type)
+          : ticketInput.branchType,
+      branchName:
+        ticketInput.branchName === undefined
+          ? suggestBranchName(ticketInput.type, ticketInput.title)
+          : ticketInput.branchName,
+      commitType:
+        ticketInput.commitType === undefined
+          ? suggestCommitType(ticketInput.type)
+          : ticketInput.commitType,
       commitScope: ticketInput.commitScope ?? null,
-      commitDescription: ticketInput.commitDescription === undefined ? ticketInput.title : ticketInput.commitDescription,
+      commitDescription:
+        ticketInput.commitDescription === undefined
+          ? ticketInput.title
+          : ticketInput.commitDescription,
     });
     return toTicketResponse(ticket);
   }
@@ -74,28 +110,18 @@ export class CreateTicketService {
 export class UpdateTicketService {
   constructor(private readonly ticketRepository: Pick<TicketRepository, "findById" | "update">) {}
 
-  async execute(idValue: unknown, input: unknown, actor: AuthenticatedUser): Promise<TicketResponse> {
+  async execute(
+    idValue: unknown,
+    input: unknown,
+    actor: AuthenticatedUser,
+  ): Promise<TicketResponse> {
     const id = parseTicketId(idValue);
     const changes = validateUpdateTicketInput(input);
     const ticket = await this.ticketRepository.findById(id);
-    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+    if (!ticket)
+      throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
 
-    // Los desarrolladores editan solo tickets propios/asignados o toman uno libre para sí mismos.
-    if (actor.role !== "admin") {
-      const ownsTicket = ticket.createdById === actor.id;
-      const isAssignee = ticket.assigneeId === actor.id;
-      const takesTicket = ticket.assigneeId === null && changes.assigneeId === actor.id;
-      if (!ownsTicket && !isAssignee && !takesTicket) throw permissionError();
-
-      // Cambiar el responsable solo permite que un desarrollador tome un ticket sin asignar.
-      if (changes.assigneeId !== undefined && changes.assigneeId !== ticket.assigneeId && !takesTicket) {
-        throw permissionError();
-      }
-      // Cambiar el estado exige estar asignado o tomar el ticket en esta misma solicitud.
-      if (changes.status !== undefined && changes.status !== ticket.status && !isAssignee && !takesTicket) {
-        throw permissionError();
-      }
-    }
+    assertCanUpdateTicket(ticket, changes, actor);
 
     const updated = await this.ticketRepository.update(ticket, changes);
     return toTicketResponse(updated);
@@ -109,12 +135,10 @@ export class RegenerateTicketSuggestionsService {
   async execute(idValue: unknown, actor: AuthenticatedUser): Promise<TicketResponse> {
     const id = parseTicketId(idValue);
     const ticket = await this.ticketRepository.findById(id);
-    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+    if (!ticket)
+      throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
 
-    // Reutiliza la regla de edición: administrador, autor o responsable del ticket.
-    if (actor.role !== "admin" && ticket.createdById !== actor.id && ticket.assigneeId !== actor.id) {
-      throw permissionError();
-    }
+    assertCanRegenerateTicketSuggestions(ticket, actor);
 
     // Calcula a partir del tipo y título actuales; conserva commitScope y los demás campos.
     const updated = await this.ticketRepository.update(ticket, {
@@ -131,16 +155,18 @@ export class RegenerateTicketSuggestionsService {
 export class UpdateTicketStatusService {
   constructor(private readonly ticketRepository: Pick<TicketRepository, "findById" | "update">) {}
 
-  async execute(idValue: unknown, input: unknown, actor: AuthenticatedUser): Promise<TicketResponse> {
+  async execute(
+    idValue: unknown,
+    input: unknown,
+    actor: AuthenticatedUser,
+  ): Promise<TicketResponse> {
     const id = parseTicketId(idValue);
     const status = validateTicketStatusInput(input);
     const ticket = await this.ticketRepository.findById(id);
-    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+    if (!ticket)
+      throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
 
-    // Un administrador cambia cualquier estado; un desarrollador solo uno asignado o sin responsable.
-    if (actor.role !== "admin" && ticket.assigneeId !== actor.id && ticket.assigneeId !== null) {
-      throw permissionError();
-    }
+    assertCanUpdateTicketStatus(ticket, actor);
 
     // Al actuar sobre un ticket libre, el desarrollador autenticado lo toma además de cambiar su estado.
     const changes = {
@@ -157,23 +183,17 @@ export class DeleteTicketService {
   constructor(private readonly ticketRepository: Pick<TicketRepository, "findById" | "delete">) {}
 
   async execute(idValue: unknown, actor: AuthenticatedUser): Promise<{ message: string }> {
-    // Comprueba permisos antes de consultar el ID para que solo administradores accedan a esta operación.
-    if (actor.role !== "admin") {
-      throw new HttpError(403, "PERMISO_DENEGADO", "Solo un administrador puede eliminar tickets.");
-    }
+    // Comprueba permisos antes de consultar el ID para no exponer tickets a desarrolladores.
+    assertCanDeleteTicket(actor);
 
     const id = parseTicketId(idValue);
     const ticket = await this.ticketRepository.findById(id);
-    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+    if (!ticket)
+      throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
 
     await this.ticketRepository.delete(ticket);
     return { message: "Ticket eliminado correctamente." };
   }
-}
-
-// Mantiene uniforme el error de autorización en las operaciones de edición.
-function permissionError(): HttpError {
-  return new HttpError(403, "PERMISO_DENEGADO", "No tenés permiso para editar este ticket.");
 }
 
 // Devuelve un ticket por ID y responde con 404 cuando no existe.
@@ -183,7 +203,8 @@ export class GetTicketService {
   async execute(idValue: unknown): Promise<TicketResponse> {
     const id = parseTicketId(idValue);
     const ticket = await this.ticketRepository.findById(id);
-    if (!ticket) throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
+    if (!ticket)
+      throw new HttpError(404, "TICKET_NO_ENCONTRADO", "No se encontró el ticket solicitado.");
     return toTicketResponse(ticket);
   }
 }
@@ -192,10 +213,20 @@ export class GetTicketService {
 export class ListTicketsService {
   constructor(private readonly ticketRepository: Pick<TicketReadRepository, "findAll">) {}
 
-  async execute(filtersValue?: unknown, currentUserId?: number): Promise<TicketResponse[] | TicketsByStatus> {
+  async execute(
+    filtersValue?: unknown,
+    currentUserId?: number,
+  ): Promise<TicketResponse[] | TicketsByStatus> {
     const filters = validateTicketListFilters(filtersValue);
-    if (filters.mine && (!Number.isSafeInteger(currentUserId) || !currentUserId || currentUserId <= 0)) {
-      throw new HttpError(401, "USUARIO_NO_AUTENTICADO", "Se requiere iniciar sesión para consultar mis tickets.");
+    if (
+      filters.mine &&
+      (!Number.isSafeInteger(currentUserId) || !currentUserId || currentUserId <= 0)
+    ) {
+      throw new HttpError(
+        401,
+        "USUARIO_NO_AUTENTICADO",
+        "Se requiere iniciar sesión para consultar mis tickets.",
+      );
     }
 
     const { mine, groupBy, ...repositoryFilters } = filters;

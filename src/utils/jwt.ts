@@ -12,15 +12,11 @@ type JwtSettings = Pick<AppConfig, "jwtSecret" | "jwtExpiresIn">;
 
 // Firma un token de acceso con el identificador y rol del usuario y la expiración configurada.
 export function signAccessToken(claims: AccessTokenClaims, settings: JwtSettings): string {
-  return jwt.sign(
-    { role: claims.role },
-    settings.jwtSecret,
-    {
-      algorithm: "HS256",
-      subject: String(claims.userId),
-      expiresIn: settings.jwtExpiresIn as SignOptions["expiresIn"],
-    },
-  );
+  return jwt.sign({ role: claims.role }, settings.jwtSecret, {
+    algorithm: "HS256",
+    subject: String(claims.userId),
+    expiresIn: settings.jwtExpiresIn as SignOptions["expiresIn"],
+  });
 }
 
 // Verifica firma, algoritmo y expiración, y solo devuelve identificadores y roles admitidos.
