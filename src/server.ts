@@ -3,14 +3,17 @@ import { createApp } from "./app";
 import { readConfig } from "./config/env";
 import { sequelize } from "./database/sequelize";
 import { User } from "./models/user";
-import "./models/ticket";
+import { Ticket } from "./models/ticket";
 import { UserRepository } from "./repositories/user-repository";
+import { TicketRepository } from "./repositories/ticket-repository";
 import { createAuthenticationMiddleware } from "./middleware/authentication";
 import { createRoleAuthorizationMiddleware } from "./middleware/authorize-role";
 import { createChangeUserRoleController, createListUsersController } from "./controllers/user-controller";
+import { createCreateTicketController, createGetTicketController, createListTicketsController } from "./controllers/ticket-controller";
 import { ChangeUserRoleService, ListUsersService } from "./services/user-service";
 import { LoginUserService } from "./services/login-user-service";
 import { RegisterUserService } from "./services/register-user-service";
+import { CreateTicketService, GetTicketService, ListTicketsService } from "./services/ticket-service";
 
 // Carga y valida la configuración antes de intentar iniciar el servidor.
 const config = readConfig();
@@ -23,10 +26,14 @@ async function startServer(): Promise<void> {
 
     // Conecta modelo, repositorio y servicios para habilitar registro e inicio de sesión.
     const userRepository = new UserRepository(User);
+    const ticketRepository = new TicketRepository(Ticket);
     const registerUserService = new RegisterUserService(userRepository);
     const loginUserService = new LoginUserService(userRepository, config);
     const listUsersService = new ListUsersService(userRepository);
     const changeUserRoleService = new ChangeUserRoleService(userRepository);
+    const createTicketService = new CreateTicketService(ticketRepository);
+    const getTicketService = new GetTicketService(ticketRepository);
+    const listTicketsService = new ListTicketsService(ticketRepository);
     const app = createApp({
       register: createRegisterUserController(registerUserService),
       login: createLoginUserController(loginUserService),
@@ -35,6 +42,12 @@ async function startServer(): Promise<void> {
         requireAdmin: createRoleAuthorizationMiddleware("admin"),
         list: createListUsersController(listUsersService),
         updateRole: createChangeUserRoleController(changeUserRoleService),
+      },
+      tickets: {
+        authenticate: createAuthenticationMiddleware(userRepository, config),
+        create: createCreateTicketController(createTicketService),
+        findById: createGetTicketController(getTicketService),
+        list: createListTicketsController(listTicketsService),
       },
     });
 
