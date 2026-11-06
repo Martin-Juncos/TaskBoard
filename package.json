@@ -12,7 +12,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "test": "tsx --test",
+    "test": "node src/database/assert-test-database.cjs && npm run db:test:migrate && tsx --test",
     "db:check": "tsx src/database/check-connection.ts",
     "db:migrate": "sequelize-cli db:migrate --env development",
     "db:migrate:undo": "sequelize-cli db:migrate:undo --env development",
