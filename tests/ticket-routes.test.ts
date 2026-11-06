@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, test } from "node:test";
 import { createApp } from "../src/app";
-import { createCreateTicketController, createGetTicketController, createListTicketsController, createUpdateTicketController } from "../src/controllers/ticket-controller";
+import { createCreateTicketController, createGetTicketController, createListTicketsController, createRegenerateTicketSuggestionsController, createUpdateTicketController } from "../src/controllers/ticket-controller";
 import { createAuthenticationMiddleware } from "../src/middleware/authentication";
 import type { Ticket } from "../src/models/ticket";
 import type { User } from "../src/models/user";
 import type { CreateTicketRecord, UpdateTicketRecord } from "../src/repositories/ticket-repository";
 import type { TicketRepositoryFilters } from "../src/types/ticket-filters";
-import { CreateTicketService, GetTicketService, ListTicketsService, UpdateTicketService } from "../src/services/ticket-service";
+import { CreateTicketService, GetTicketService, ListTicketsService, RegenerateTicketSuggestionsService, UpdateTicketService } from "../src/services/ticket-service";
 import { signAccessToken } from "../src/utils/jwt";
 
 const settings = { jwtSecret: "secreto-para-probar-tickets", jwtExpiresIn: "1h" };
@@ -102,6 +102,7 @@ before(async () => {
       authenticate: createAuthenticationMiddleware(userRepository, settings),
       create: createCreateTicketController(new CreateTicketService(ticketRepository)),
       update: createUpdateTicketController(new UpdateTicketService(ticketRepository)),
+      regenerateSuggestions: createRegenerateTicketSuggestionsController(new RegenerateTicketSuggestionsService(ticketRepository)),
       findById: createGetTicketController(new GetTicketService(ticketRepository)),
       list: createListTicketsController(new ListTicketsService(ticketRepository)),
     },
@@ -415,4 +416,63 @@ test("PUT /api/tickets/:id controla cambios de estado y asignación", async () =
   assert.equal(allowed.status, 200);
   assert.equal(body.assigneeId, user.id);
   assert.equal(body.status, "in_progress");
+});
+
+// La regeneración necesita autenticación, permisos de edición y un ticket existente.
+test("POST /api/tickets/:id/regenerate-suggestions controla acceso e ID", async () => {
+  const withoutToken = await fetch(`${baseUrl}/api/tickets/7/regenerate-suggestions`, { method: "POST" });
+  assert.equal(withoutToken.status, 401);
+
+  for (const [id, currentUser, expectedStatus, expectedCode] of [
+    ["7", otherDeveloper, 403, "PERMISO_DENEGADO"],
+    ["abc", user, 400, "ID_INVALIDO"],
+    ["999", user, 404, "TICKET_NO_ENCONTRADO"],
+  ] as const) {
+    const response = await fetch(`${baseUrl}/api/tickets/${id}/regenerate-suggestions`, {
+      method: "POST",
+      headers: authorizationHeaders(currentUser),
+    });
+    const body = (await response.json()) as { error: { code: string } };
+    assert.equal(response.status, expectedStatus);
+    assert.equal(body.error.code, expectedCode);
+  }
+});
+
+// Usa título y tipo actuales para reemplazar sugerencias manuales, sin tocar el scope ni otros campos.
+test("POST /api/tickets/:id/regenerate-suggestions actualiza las sugerencias explícitamente", async () => {
+  const edit = await fetch(`${baseUrl}/api/tickets/7`, {
+    method: "PUT",
+    headers: { ...authorizationHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Nueva función", type: "feature", commitScope: "api" }),
+  });
+  const before = (await edit.json()) as Record<string, unknown>;
+  assert.equal(edit.status, 200);
+  assert.equal(before.branchName, "chore/rama-manual");
+  assert.equal(before.commitDescription, "Cambio manual");
+
+  const response = await fetch(`${baseUrl}/api/tickets/7/regenerate-suggestions`, {
+    method: "POST",
+    headers: authorizationHeaders(),
+  });
+  const body = (await response.json()) as Record<string, unknown>;
+  assert.equal(response.status, 200);
+  assert.equal(body.branchType, "feature");
+  assert.equal(body.branchName, "feature/nueva-funcion");
+  assert.equal(body.commitType, "feat");
+  assert.equal(body.commitDescription, "Nueva función");
+  assert.equal(body.commitScope, "api");
+  assert.equal(body.createdById, user.id);
+  assert.equal(body.priority, "high");
+});
+
+// Un administrador puede regenerar sugerencias aunque no sea autor ni responsable.
+test("POST /api/tickets/:id/regenerate-suggestions permite administrador", async () => {
+  const response = await fetch(`${baseUrl}/api/tickets/9/regenerate-suggestions`, {
+    method: "POST",
+    headers: authorizationHeaders(admin),
+  });
+  const body = (await response.json()) as Record<string, unknown>;
+  assert.equal(response.status, 200);
+  assert.equal(body.branchType, "bugfix");
+  assert.equal(body.commitType, "fix");
 });
