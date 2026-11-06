@@ -7,6 +7,7 @@ import { createAuthenticationMiddleware } from "../src/middleware/authentication
 import type { Ticket } from "../src/models/ticket";
 import type { User } from "../src/models/user";
 import type { CreateTicketRecord } from "../src/repositories/ticket-repository";
+import type { TicketListFilters } from "../src/types/ticket-filters";
 import { CreateTicketService, GetTicketService, ListTicketsService } from "../src/services/ticket-service";
 import { signAccessToken } from "../src/utils/jwt";
 
@@ -48,6 +49,21 @@ before(async () => {
     commitScope: null,
     commitDescription: "Ticket de ejemplo",
   }));
+  tickets.set(9, makeTicket(9, {
+    title: "Bloqueo de despliegue",
+    description: "",
+    type: "bug",
+    priority: "urgent",
+    status: "blocked",
+    dueDate: "2099-01-01",
+    createdById: user.id,
+    assigneeId: null,
+    branchType: "bugfix",
+    branchName: "bugfix/bloqueo-de-despliegue",
+    commitType: "fix",
+    commitScope: null,
+    commitDescription: "Bloqueo de despliegue",
+  }));
 
   const userRepository = { findById: async (id: number) => (id === user.id ? user : null) };
   const ticketRepository = {
@@ -57,9 +73,12 @@ before(async () => {
       return ticket;
     },
     findById: async (id: number) => tickets.get(id) ?? null,
-    findAll: async (search?: string) => [...tickets.values()]
-      .filter((ticket) => !search || ticket.title.toLowerCase().includes(search.toLowerCase()) ||
-        (ticket.description ?? "").toLowerCase().includes(search.toLowerCase()))
+    findAll: async (filters?: TicketListFilters) => [...tickets.values()]
+      .filter((ticket) => !filters?.search || ticket.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (ticket.description ?? "").toLowerCase().includes(filters.search.toLowerCase()))
+      .filter((ticket) => !filters?.status || ticket.status === filters.status)
+      .filter((ticket) => !filters?.priority || ticket.priority === filters.priority)
+      .filter((ticket) => !filters?.type || ticket.type === filters.type)
       .sort((left, right) => left.id - right.id),
   };
   const app = createApp({
@@ -176,7 +195,7 @@ test("GET /api/tickets lista todo sin un término de búsqueda", async () => {
   const body = (await response.json()) as Array<{ id: number }>;
 
   assert.equal(response.status, 200);
-  assert.deepEqual(body.map((ticket) => ticket.id), [7, 8]);
+  assert.deepEqual(body.map((ticket) => ticket.id), [7, 8, 9]);
 });
 
 // Busca sin distinguir mayúsculas y encuentra coincidencias en el título o la descripción.
@@ -192,10 +211,45 @@ test("GET /api/tickets?search busca en título y descripción", async () => {
   assert.deepEqual(descriptionResults.map((ticket) => ticket.id), [7]);
 });
 
+// Combina status, priority y type como condiciones AND, y también con search si se envía.
+test("GET /api/tickets combina status, priority y type", async () => {
+  const match = await fetch(`${baseUrl}/api/tickets?status=pending&priority=high&type=feature`, {
+    headers: authorizationHeaders(),
+  });
+  const matchResults = (await match.json()) as Array<{ id: number }>;
+  const noMatch = await fetch(`${baseUrl}/api/tickets?status=blocked&priority=urgent&type=feature`, {
+    headers: authorizationHeaders(),
+  });
+  const noMatchResults = (await noMatch.json()) as Array<{ id: number }>;
+  const combinedSearch = await fetch(`${baseUrl}/api/tickets?search=API&status=pending&priority=medium&type=task`, {
+    headers: authorizationHeaders(),
+  });
+  const combinedSearchResults = (await combinedSearch.json()) as Array<{ id: number }>;
+
+  assert.deepEqual(matchResults.map((ticket) => ticket.id), [8]);
+  assert.deepEqual(noMatchResults, []);
+  assert.deepEqual(combinedSearchResults.map((ticket) => ticket.id), [7]);
+});
+
 // Rechaza términos repetidos o demasiado largos en lugar de interpretarlos ambiguamente.
 test("GET /api/tickets valida el parámetro search", async () => {
   const repeated = await fetch(`${baseUrl}/api/tickets?search=uno&search=dos`, { headers: authorizationHeaders() });
   const tooLong = await fetch(`${baseUrl}/api/tickets?search=${"a".repeat(201)}`, { headers: authorizationHeaders() });
   assert.equal(repeated.status, 400);
   assert.equal(tooLong.status, 400);
+});
+
+// Rechaza nombres de filtros con valores no admitidos o parámetros repetidos.
+test("GET /api/tickets valida los filtros", async () => {
+  const invalidQueries = [
+    "status=queued",
+    "priority=low&priority=high",
+    "type=epic",
+  ];
+  for (const query of invalidQueries) {
+    const response = await fetch(`${baseUrl}/api/tickets?${query}`, { headers: authorizationHeaders() });
+    const body = (await response.json()) as { error: { code: string } };
+    assert.equal(response.status, 400);
+    assert.equal(body.error.code, "FILTRO_INVALIDO");
+  }
 });
