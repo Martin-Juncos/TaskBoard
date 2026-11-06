@@ -5,7 +5,7 @@ import type { BranchType, CommitType, TicketPriority, TicketStatus, TicketType }
 import { calculateAlert, calculateCompleted } from "../utils/ticket-derived-fields";
 import { suggestBranchName, suggestBranchType, suggestCommitType } from "../utils/ticket-suggestions";
 import { validateCreateTicketInput } from "../validation/ticket";
-import { validateTicketSearch } from "../validation/ticket-search";
+import { validateTicketListFilters } from "../validation/ticket-search";
 
 // Define los campos públicos de ticket y agrega las propiedades que se calculan al consultar.
 export interface TicketResponse {
@@ -77,13 +77,13 @@ export class GetTicketService {
   }
 }
 
-// Aplica la búsqueda opcional y calcula las propiedades derivadas de cada resultado.
+// Valida búsqueda/filtros y calcula las propiedades derivadas de cada resultado.
 export class ListTicketsService {
   constructor(private readonly ticketRepository: Pick<TicketReadRepository, "findAll">) {}
 
-  async execute(searchValue?: unknown): Promise<TicketResponse[]> {
-    const search = validateTicketSearch(searchValue);
-    const tickets = await this.ticketRepository.findAll(search);
+  async execute(filtersValue?: unknown): Promise<TicketResponse[]> {
+    const filters = validateTicketListFilters(filtersValue);
+    const tickets = await this.ticketRepository.findAll(filters);
     return tickets.map(toTicketResponse);
   }
 }
