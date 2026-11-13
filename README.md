@@ -1,14 +1,22 @@
 # TaskBoard — API REST para un tablero de tareas
 
-Trabajo práctico integrador individual del módulo Node.js del Bootcamp 5.0. TaskBoard permite registrar usuarios y organizar tickets de desarrollo en un tablero Kanban. La API está construida con Node.js, TypeScript, Express, Sequelize y PostgreSQL.
+TaskBoard es el proyecto del Trabajo Práctico Integrador del módulo Node.js del **Bootcamp 5.0 de Devlights, edición 2026**. La consigna propone elegir un dominio y menciona como opción una lista de tareas con título, prioridad, fecha límite y estado de completitud.
+
+Para este proyecto, esa idea se adapta al trabajo cotidiano de desarrollo de software: una tarea se representa como un **ticket** que permite describir un trabajo, priorizarlo, ponerle una fecha límite, seguir su estado y saber quién lo creó o tiene asignado. El objetivo es ayudar a equipos y, especialmente, a desarrolladores que recién empiezan a trabajar con tickets a organizar qué hay que hacer, qué es urgente y cuál es el próximo paso, en vez de dejar el trabajo en una lista informal.
+
+TaskBoard es una **API REST**, no una interfaz gráfica ni una integración con GitHub. Expone operaciones que se pueden probar con Thunder Client o consumir desde una futura aplicación web. Además de los campos básicos de la consigna, incorpora descripción, tipo, estados de flujo Kanban, autor y responsable; también ofrece sugerencias de nombres de rama y commits para reducir el trabajo inicial al preparar un cambio de código.
+
+Está construida con Node.js, TypeScript, Express, Sequelize y PostgreSQL.
 
 ## Estado
 
-El MVP implementa el CRUD de tickets, registro y login, autenticación JWT, permisos, filtros, migraciones y pruebas automatizadas con PostgreSQL aislado. También incluye endpoints complementarios para usuarios y para el flujo de tickets. La colección **TaskBoard API** está configurada en Thunder Client para probar solicitudes desde VS Code.
+El MVP implementa el CRUD de tickets, registro y login, autenticación JWT, permisos, filtros, migraciones y pruebas automatizadas con PostgreSQL aislado. El campo `completed` de la consigna se representa mediante el estado `completed` y se devuelve como un dato derivado. También incluye endpoints complementarios para usuarios y para el flujo de tickets. La colección **TaskBoard API** está configurada en Thunder Client para probar solicitudes desde VS Code.
 
 Quedan fuera del alcance actual los tableros múltiples, proyectos, comentarios, adjuntos, notificaciones y la integración real con GitHub.
 
 ### Relación con la consigna
+
+La entidad elegida es la tarea, adaptada al concepto de ticket de desarrollo: los campos sugeridos de título, prioridad y fecha límite se conservan; la completitud se refleja en el estado. Los campos de descripción, tipo, asignación y sugerencias Git amplían el ejemplo para hacerlo más útil en un flujo de trabajo de software.
 
 | Requisito del TP                    | Implementación en TaskBoard                                                       |
 | ----------------------------------- | --------------------------------------------------------------------------------- |
