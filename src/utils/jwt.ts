@@ -3,6 +3,7 @@ import type { AppConfig } from "../config/env";
 import { HttpError } from "../errors/http-error";
 import { isUserRole, type UserRole } from "../types/user-role";
 
+// Declara los datos de identidad y autorización incluidos en el JWT.
 export interface AccessTokenClaims {
   userId: number;
   role: UserRole;

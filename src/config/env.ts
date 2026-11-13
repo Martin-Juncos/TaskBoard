@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+// Agrupa la configuración validada que necesitan el servidor y las conexiones a la base.
 export interface AppConfig {
   port: number;
   databaseUrl: string;

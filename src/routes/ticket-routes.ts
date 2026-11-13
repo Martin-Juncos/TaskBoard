@@ -1,5 +1,6 @@
 import { Router, type RequestHandler } from "express";
 
+// Reúne los controladores de tickets y el middleware que autentica sus solicitudes.
 export interface TicketRouteHandlers {
   authenticate: RequestHandler;
   create: RequestHandler;
