@@ -2,6 +2,7 @@ import { HttpError } from "../errors/http-error";
 import { normalizeEmail } from "./email";
 import { isRecord } from "./is-record";
 
+// Representa los campos normalizados que el servicio de login puede procesar.
 export interface LoginUserInput {
   email: string;
   password: string;

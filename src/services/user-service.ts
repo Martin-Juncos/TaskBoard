@@ -3,6 +3,7 @@ import type { UserRepository } from "../repositories/user-repository";
 import type { AuthenticatedUser } from "../types/authenticated-user";
 import { isUserRole, type UserRole } from "../types/user-role";
 
+// Limita la respuesta de usuario a datos públicos y omite el hash de contraseña.
 export interface PublicUser {
   id: number;
   name: string;

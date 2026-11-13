@@ -5,6 +5,7 @@ import { createAuthRouter, type AuthRouteHandlers } from "./routes/auth-routes";
 import { createUserRouter, type UserRouteHandlers } from "./routes/user-routes";
 import { createTicketRouter, type TicketRouteHandlers } from "./routes/ticket-routes";
 
+// Agrupa handlers opcionales para permitir montar aplicaciones parciales en las pruebas.
 export interface AppRouteHandlers extends AuthRouteHandlers {
   users?: UserRouteHandlers;
   tickets?: TicketRouteHandlers;
@@ -14,7 +15,7 @@ export interface AppRouteHandlers extends AuthRouteHandlers {
 export function createApp(authHandlers?: AppRouteHandlers) {
   const app = express();
 
-  // Convierte automáticamente los cuerpos JSON de las solicitudes en objetos de JavaScript.
+  // Procesa JSON antes de las rutas para que los controladores reciban cuerpos utilizables.
   app.use(express.json());
 
   // Permite comprobar rápidamente que la API está encendida y responde correctamente.
@@ -22,17 +23,16 @@ export function createApp(authHandlers?: AppRouteHandlers) {
     response.status(200).json({ status: "ok" });
   });
 
-  // Agrega las rutas de autenticación que el punto de entrada haya configurado.
+  // Permite montar solo /health en pruebas que no necesitan autenticación.
   if (authHandlers) {
     app.use("/api/auth", createAuthRouter(authHandlers));
   }
 
-  // Agrega endpoints de usuarios solo cuando se inyectan sus middlewares y controladores.
+  // Mantiene opcionales los módulos que una composición de prueba no necesita.
   if (authHandlers?.users) {
     app.use("/api/users", createUserRouter(authHandlers.users));
   }
 
-  // Agrega rutas de tickets con los controladores y la autenticación configurados.
   if (authHandlers?.tickets) {
     app.use("/api/tickets", createTicketRouter(authHandlers.tickets));
   }
@@ -40,7 +40,7 @@ export function createApp(authHandlers?: AppRouteHandlers) {
   // Convierte rutas no registradas en HttpError antes de que se ejecute el manejador global.
   app.use(notFoundHandler);
 
-  // Registra el manejador al final para que reciba errores de las rutas y middlewares anteriores.
+  // Debe quedar al final para centralizar errores propagados por cualquier ruta.
   app.use(errorHandler);
 
   return app;

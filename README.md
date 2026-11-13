@@ -1,12 +1,48 @@
-# TaskBoard
+# TaskBoard — API REST para un tablero de tareas
 
-API REST para gestionar un tablero Kanban de tickets de desarrollo. Está construida con Node.js, TypeScript, Express, Sequelize y PostgreSQL.
+Trabajo práctico integrador individual del módulo Node.js del Bootcamp 5.0. TaskBoard permite registrar usuarios y organizar tickets de desarrollo en un tablero Kanban. La API está construida con Node.js, TypeScript, Express, Sequelize y PostgreSQL.
 
 ## Estado
 
-El MVP de la API está implementado: salud, registro/login, usuarios y roles, CRUD de tickets, permisos, búsqueda/filtros, migraciones y pruebas con PostgreSQL aislado. La API está cubierta por pruebas automatizadas. La colección **TaskBoard API** también existe en Thunder Client para probar solicitudes desde VS Code.
+El MVP implementa el CRUD de tickets, registro y login, autenticación JWT, permisos, filtros, migraciones y pruebas automatizadas con PostgreSQL aislado. También incluye endpoints complementarios para usuarios y para el flujo de tickets. La colección **TaskBoard API** está configurada en Thunder Client para probar solicitudes desde VS Code.
 
 Quedan fuera del alcance actual los tableros múltiples, proyectos, comentarios, adjuntos, notificaciones y la integración real con GitHub.
+
+### Relación con la consigna
+
+| Requisito del TP                    | Implementación en TaskBoard                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------- |
+| Node.js, Express y TypeScript       | TypeScript estricto; Express configura la API y Node.js ejecuta el servidor.      |
+| Base de datos y dos modelos         | PostgreSQL con Sequelize; modelos `User` y `Ticket`.                              |
+| CRUD de la entidad principal        | `GET` colección, `GET` por ID, `POST`, `PUT` y `DELETE` para tickets.             |
+| Arquitectura en capas               | Rutas → controladores → servicios → repositorios → modelos.                       |
+| Validaciones y reglas de negocio    | Validación de entradas, email único, reglas de autorización y estados permitidos. |
+| Registro/login con bcrypt y JWT     | La contraseña se guarda como hash; el login emite un JWT.                         |
+| Protección de escrituras            | El middleware verifica JWT en operaciones protegidas.                             |
+| Códigos HTTP y manejo de errores    | Respuestas JSON con `200`, `201`, `400`, `401`, `403`, `404` y `500`.             |
+| Controladores con manejo de errores | Los controladores responden ante errores y los pasan al middleware global.        |
+| Variables de entorno                | `.env` local ignorado por Git; `.env.example` documenta los nombres esperados.    |
+
+La consigna considera filtros, roles y relaciones entre modelos como extras opcionales. TaskBoard también incorpora asignación de tickets, estados adicionales, sugerencias de rama/commit y una colección Thunder Client.
+
+## Arquitectura y flujo de una solicitud
+
+La API separa HTTP, reglas de negocio y persistencia. Así se puede entender y probar cada responsabilidad sin concentrar todo en una sola ruta.
+
+```text
+Cliente (Thunder Client / otra aplicación)
+  → Express: src/app.ts registra JSON, rutas y middlewares globales
+  → Router: src/routes/ selecciona endpoint y autenticación
+  → Controller: src/controllers/ adapta HTTP a la operación
+  → Service: src/services/ valida reglas del caso de uso y permisos
+  → Repository: src/repositories/ consulta o modifica datos
+  → Sequelize Model: src/models/ representa User o Ticket
+  → PostgreSQL
+```
+
+El middleware de autenticación verifica el Bearer JWT antes de las rutas protegidas y carga el usuario autenticado. Los errores previsibles usan `HttpError`; el middleware global los convierte al formato JSON documentado más abajo, sin revelar stack traces. Si el método o la ruta no existen, el middleware `not-found-handler` responde `404`.
+
+`src/create-application.ts` conecta repositorios, servicios y controladores. `src/server.ts` lee configuración, espera la conexión a PostgreSQL antes de escuchar, y cierra el servidor y Sequelize al recibir `SIGINT` o `SIGTERM`. Las pruebas de integración reutilizan la misma composición de dependencias.
 
 ## Requisitos e instalación
 
@@ -96,6 +132,14 @@ Authorization: Bearer <token>
 ```
 
 El token se obtiene en `POST /api/auth/login`. El registro público siempre asigna el rol `developer`; el cliente no puede elegir el rol. Los únicos roles son `admin` y `developer`.
+
+### Flujo básico de uso
+
+1. Configurá `.env`, creá las bases, aplicá migraciones y arrancá la API.
+2. Creá un usuario con `POST /api/auth/register` o prepará el administrador con el seed.
+3. Iniciá sesión con `POST /api/auth/login` y copiá el JWT de la respuesta.
+4. En Thunder Client, enviá `Authorization: Bearer <token>` para consultar o modificar usuarios y tickets.
+5. Creá, listá, consultá por ID y actualizá tickets. Solo los administradores pueden eliminarlos o cambiar roles; los developers pueden operar tickets según su autoría o asignación.
 
 ### Errores comunes
 
@@ -362,27 +406,146 @@ Requiere autenticación, ID válido y rol administrador. No lleva cuerpo.
 
 En VS Code está disponible la colección **TaskBoard API**, con solicitudes de éxito y error agrupadas en **Salud**, **Autenticación**, **Usuarios**, **Tickets** y **Errores**. Configurá en Thunder Client una URL base y un entorno local con los datos de prueba. No guardes claves reales en la colección. La colección se administra desde Thunder Client y no está exportada como archivo de este repositorio.
 
-## Estructura
+## Carpetas y archivos
+
+### Raíz del proyecto
+
+| Archivo                               | Propósito                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| `package.json`                        | Dependencias, versiones de Node compatibles y comandos npm.               |
+| `package-lock.json`                   | Versiones exactas para instalaciones reproducibles con npm.               |
+| `tsconfig.json`                       | Configuración de compilación TypeScript para producción.                  |
+| `tsconfig.test.json`                  | Incluye `src/` y `tests/` en la comprobación de tipos.                    |
+| `.env.example`                        | Plantilla de variables; no contiene credenciales reales.                  |
+| `.gitignore`                          | Excluye `.env`, dependencias, compilación, cobertura y logs.              |
+| `.sequelizerc`                        | Indica a Sequelize CLI dónde están configuración, migraciones y seeders.  |
+| `README.md`                           | Guía de instalación, arquitectura, uso y contrato de la API.              |
+| `AGENTS.md`                           | Acuerdos de trabajo y comandos del repositorio para asistentes de código. |
+| `eslint.config.mjs`                   | Reglas de análisis estático para JavaScript y TypeScript.                 |
+| `.editorconfig`                       | Convenciones de fin de línea, codificación y sangría.                     |
+| `.prettierrc.json`, `.prettierignore` | Opciones de formato y exclusiones de Prettier.                            |
+
+### Código de la aplicación: `src/`
 
 ```text
 src/
-├─ app.ts                 # Configura Express y registra rutas/middlewares
-├─ create-application.ts  # Conecta repositorios, servicios y controladores
-├─ server.ts              # Configuración, PostgreSQL y ciclo de vida HTTP
-├─ config/                # Variables de entorno
-├─ controllers/           # Adaptadores HTTP
-├─ database/              # Sequelize, migraciones y seeders
-├─ middleware/            # Autenticación y errores
-├─ models/                # Modelos Sequelize
-├─ repositories/          # Consultas y persistencia
-├─ routes/                # Definición de endpoints
-├─ services/              # Casos de uso y reglas de negocio
-├─ types/                 # Tipos y enums compartidos
-├─ utils/                 # JWT y funciones puras auxiliares
-└─ validation/            # Validación y normalización de entradas
-tests/                    # Pruebas unitarias, HTTP e integración PostgreSQL
+├─ app.ts
+├─ create-application.ts
+├─ server.ts
+├─ config/
+│  └─ env.ts
+├─ controllers/
+│  ├─ auth-controller.ts
+│  ├─ ticket-controller.ts
+│  └─ user-controller.ts
+├─ database/
+│  ├─ assert-test-database.cjs
+│  ├─ check-connection.ts
+│  ├─ sequelize-cli-config.cjs
+│  ├─ sequelize.ts
+│  ├─ migrations/
+│  │  ├─ 20261105000100-create-users.js
+│  │  ├─ 20261105000200-create-tickets.js
+│  │  └─ 20261105000300-add-name-to-users.js
+│  └─ seeders/
+│     └─ 20261105000400-seed-admin.js
+├─ errors/
+│  └─ http-error.ts
+├─ middleware/
+│  ├─ authentication.ts
+│  ├─ error-handler.ts
+│  └─ not-found-handler.ts
+├─ models/
+│  ├─ ticket.ts
+│  └─ user.ts
+├─ repositories/
+│  ├─ ticket-repository.ts
+│  └─ user-repository.ts
+├─ routes/
+│  ├─ auth-routes.ts
+│  ├─ ticket-routes.ts
+│  └─ user-routes.ts
+├─ services/
+│  ├─ login-user-service.ts
+│  ├─ register-user-service.ts
+│  ├─ ticket-authorization.ts
+│  ├─ ticket-service.ts
+│  └─ user-service.ts
+├─ types/
+│  ├─ authenticated-user.ts
+│  ├─ express.d.ts
+│  ├─ ticket-enums.ts
+│  ├─ ticket-filters.ts
+│  └─ user-role.ts
+├─ utils/
+│  ├─ jwt.ts
+│  ├─ ticket-derived-fields.ts
+│  └─ ticket-suggestions.ts
+└─ validation/
+   ├─ email.ts
+   ├─ is-record.ts
+   ├─ login-user.ts
+   ├─ register-user.ts
+   ├─ ticket-search.ts
+   └─ ticket.ts
 ```
 
-## Auditoría de dependencias
+| Carpeta/archivo                     | Responsabilidad                                                         |
+| ----------------------------------- | ----------------------------------------------------------------------- |
+| `app.ts`                            | Crea Express, registra `/health`, routers y middlewares.                |
+| `create-application.ts`             | Ensambla autenticación, repositorios, servicios y controladores.        |
+| `server.ts`                         | Punto de entrada; configuración, conexión y cierre ordenado.            |
+| `config/env.ts`                     | Lee y valida variables de entorno.                                      |
+| `controllers/`                      | Recibe parámetros HTTP, llama servicios y arma respuestas.              |
+| `routes/`                           | Declara métodos, paths y middleware por endpoint.                       |
+| `services/`                         | Casos de uso, reglas del dominio y permisos.                            |
+| `repositories/`                     | Acceso a datos mediante los modelos Sequelize.                          |
+| `models/`                           | Esquema y relaciones de `User` y `Ticket`.                              |
+| `database/sequelize.ts`             | Instancia compartida de Sequelize para PostgreSQL.                      |
+| `database/sequelize-cli-config.cjs` | Configuración de conexiones de desarrollo y pruebas para Sequelize CLI. |
+| `database/migrations/`              | Historial incremental de tablas, campos, claves foráneas e índices.     |
+| `database/seeders/`                 | Alta reversible del administrador inicial.                              |
+| `database/check-connection.ts`      | Comando para verificar la conexión local.                               |
+| `database/assert-test-database.cjs` | Impide migrar o probar contra la base de desarrollo.                    |
+| `middleware/` y `errors/`           | Autenticación, errores HTTP y rutas inexistentes.                       |
+| `validation/`                       | Comprueba y normaliza cuerpos y query params.                           |
+| `types/`                            | Roles, estados, prioridades, tipos de ticket y filtros.                 |
+| `utils/`                            | JWT, campos calculados y sugerencias auxiliares.                        |
 
-Al 6 de noviembre de 2026, `npm audit` informa 13 vulnerabilidades moderadas y ninguna alta o crítica; 2 son de producción (Sequelize y su dependencia `uuid`) y las demás pertenecen a herramientas de desarrollo. Las correcciones automáticas sugeridas requieren downgrades o cambios incompatibles. No ejecutes `npm audit fix --force` sin revisar primero las opciones compatibles.
+### Pruebas: `tests/`
+
+```text
+tests/
+├─ app.test.ts
+├─ auth-login.test.ts
+├─ auth-register.test.ts
+├─ authentication.test.ts
+├─ config.test.ts
+├─ database-isolation.test.ts
+├─ error-handler.test.ts
+├─ helpers/ticket-routes.ts
+├─ http-error.test.ts
+├─ jwt.test.ts
+├─ register-user-service.test.ts
+├─ register-user.test.ts
+├─ ticket-deletion.test.ts
+├─ ticket-derived-fields.test.ts
+├─ ticket-model.test.ts
+├─ ticket-queries.test.ts
+├─ ticket-repository.test.ts
+├─ ticket-status.test.ts
+├─ ticket-suggestions.test.ts
+├─ ticket-updates.test.ts
+├─ user-repository.test.ts
+├─ user-role.test.ts
+├─ user-service.test.ts
+└─ users-routes.test.ts
+```
+
+Las pruebas unitarias verifican validaciones, servicios, modelos y utilidades. Las pruebas HTTP revisan rutas y respuestas. `database-isolation.test.ts` integra la aplicación con PostgreSQL usando `DATABASE_URL_TEST` y limpia las tablas de prueba entre casos; `helpers/ticket-routes.ts` comparte el montaje HTTP para los tests de tickets.
+
+`node_modules/`, `dist/` y `coverage/` son directorios generados localmente: no son código fuente ni se versionan.
+
+## Seguridad de dependencias
+
+Antes de una entrega, ejecutá `npm audit` para revisar las vulnerabilidades conocidas de las versiones instaladas. No uses `npm audit fix --force` sin revisar antes el impacto de las actualizaciones incompatibles en Sequelize, TypeScript y las herramientas de desarrollo.
