@@ -10,6 +10,7 @@ type JwtSettings = Pick<AppConfig, "jwtSecret" | "jwtExpiresIn">;
 type PasswordComparer = (password: string, passwordHash: string) => Promise<boolean>;
 type AccessTokenSigner = (claims: AccessTokenClaims, settings: JwtSettings) => string;
 
+// Define la respuesta pública de un inicio de sesión exitoso.
 export interface LoginResult {
   token: string;
 }

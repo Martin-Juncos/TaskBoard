@@ -8,6 +8,7 @@ import { validateRegisterUserInput } from "../validation/register-user";
 
 const BCRYPT_SALT_ROUNDS = 10;
 
+// Define los datos seguros que el servicio devuelve al crear una cuenta.
 export interface RegisteredUser {
   id: number;
   name: string;

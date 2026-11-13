@@ -1,5 +1,6 @@
 import { Router, type RequestHandler } from "express";
 
+// Permite inyectar los controladores disponibles de registro e inicio de sesión.
 export interface AuthRouteHandlers {
   register?: RequestHandler;
   login?: RequestHandler;

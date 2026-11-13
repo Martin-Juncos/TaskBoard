@@ -2,6 +2,7 @@ import type { ModelStatic } from "sequelize";
 import type { User } from "../models/user";
 import type { UserRole } from "../types/user-role";
 
+// Define los campos persistibles del usuario; contiene el hash, no la contraseña original.
 export interface CreateUserRecord {
   name: string;
   email: string;

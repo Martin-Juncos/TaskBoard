@@ -2,6 +2,7 @@ import { HttpError } from "../errors/http-error";
 import { normalizeEmail } from "./email";
 import { isRecord } from "./is-record";
 
+// Representa los datos validados del registro; el rol lo determina el servidor.
 export interface RegisterUserInput {
   name: string;
   email: string;

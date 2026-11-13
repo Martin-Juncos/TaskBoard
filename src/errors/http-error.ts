@@ -1,3 +1,4 @@
+// Representa un error conocido con el estado y código que devolverá la API.
 export class HttpError extends Error {
   readonly statusCode: number;
   readonly code: string;

@@ -1,5 +1,6 @@
 import { Router, type RequestHandler } from "express";
 
+// Describe los controladores de usuarios y el middleware que protege las rutas.
 export interface UserRouteHandlers {
   authenticate: RequestHandler;
   list: RequestHandler;
