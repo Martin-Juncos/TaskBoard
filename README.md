@@ -10,7 +10,7 @@ Está construida con Node.js, TypeScript, Express, Sequelize y PostgreSQL.
 
 ## Estado
 
-El MVP implementa el CRUD de tickets, registro y login, autenticación JWT, permisos, filtros, migraciones y pruebas automatizadas con PostgreSQL aislado. El campo `completed` de la consigna se representa mediante el estado `completed` y se devuelve como un dato derivado. También incluye endpoints complementarios para usuarios y para el flujo de tickets. La colección **TaskBoard API** está configurada en Thunder Client para probar solicitudes desde VS Code.
+El MVP implementa el CRUD de tickets, registro y login, autenticación JWT, permisos, filtros y migraciones. El campo `completed` de la consigna se representa mediante el estado `completed` y se devuelve como un dato derivado. También incluye endpoints complementarios para usuarios y para el flujo de tickets. La colección **TaskBoard API** está configurada en Thunder Client para probar solicitudes desde VS Code.
 
 Quedan fuera del alcance actual los tableros múltiples, proyectos, comentarios, adjuntos, notificaciones y la integración real con GitHub.
 
@@ -50,13 +50,13 @@ Cliente (Thunder Client / otra aplicación)
 
 El middleware de autenticación verifica el Bearer JWT antes de las rutas protegidas y carga el usuario autenticado. Los errores previsibles usan `HttpError`; el middleware global los convierte al formato JSON documentado más abajo, sin revelar stack traces. Si el método o la ruta no existen, el middleware `not-found-handler` responde `404`.
 
-`src/create-application.ts` conecta repositorios, servicios y controladores. `src/server.ts` lee configuración, espera la conexión a PostgreSQL antes de escuchar, y cierra el servidor y Sequelize al recibir `SIGINT` o `SIGTERM`. Las pruebas de integración reutilizan la misma composición de dependencias.
+`src/app.ts` configura Express y conecta repositorios, servicios y controladores. `src/server.ts` lee la configuración, espera la conexión a PostgreSQL antes de escuchar y cierra el servidor y Sequelize al recibir `SIGINT` o `SIGTERM`.
 
 ## Requisitos e instalación
 
 - Node.js 20 o superior y npm.
 - PostgreSQL disponible localmente.
-- Dos bases de datos: `taskboard` para desarrollo y `taskboard_test` para pruebas. Pueden tener otros nombres, pero la URL de pruebas debe terminar en `_test` y no puede apuntar a la base de desarrollo.
+- Una base de datos PostgreSQL, por ejemplo `taskboard`.
 
 1. Cloná el repositorio e instalá las dependencias:
 
@@ -64,7 +64,7 @@ El middleware de autenticación verifica el Bearer JWT antes de las rutas proteg
    npm install
    ```
 
-2. Creá las dos bases PostgreSQL desde pgAdmin o `psql`. Asegurate de que el usuario de la conexión pueda crear y modificar tablas.
+2. Creá la base PostgreSQL desde pgAdmin o `psql`. Asegurate de que el usuario de la conexión pueda crear y modificar tablas.
 3. Copiá `.env.example` a `.env` (`Copy-Item .env.example .env` en PowerShell o `cp .env.example .env` en Bash) y completá las variables de entorno de la tabla siguiente. Reemplazá todos los ejemplos por valores locales; no subas ni compartas `.env`.
 4. Verificá la conexión y aplicá las migraciones:
 
@@ -84,29 +84,25 @@ El servidor escucha en `http://localhost:3000` por defecto, espera que PostgreSQ
 
 ## Variables de entorno
 
-| Variable            | Requerida                               | Descripción                                                                                                                                                                     |
-| ------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`              | No                                      | Puerto HTTP; por defecto `3000`.                                                                                                                                                |
-| `DATABASE_URL`      | Sí para servidor y migraciones normales | URL PostgreSQL de desarrollo, por ejemplo `postgres://USUARIO:CONTRASENA@localhost:5432/taskboard`. Codificá caracteres especiales de usuario/contraseña como parte de una URL. |
-| `DATABASE_URL_TEST` | Para pruebas y migraciones de test      | URL PostgreSQL exclusiva de pruebas. El nombre de la base debe terminar en `_test`, por ejemplo `taskboard_test`, y diferir de `DATABASE_URL`.                                  |
-| `JWT_SECRET`        | Sí para iniciar el servidor             | Clave privada para firmar JWT. Usá una cadena aleatoria y larga; no la incluyas en el repositorio.                                                                              |
-| `JWT_EXPIRES_IN`    | Sí para iniciar el servidor             | Duración del token aceptada por `jsonwebtoken`, por ejemplo `1h`.                                                                                                               |
-| `ADMIN_EMAIL`       | Solo para crear/revertir el seed        | Email de la cuenta administradora inicial.                                                                                                                                      |
-| `ADMIN_PASSWORD`    | Solo para crear el seed                 | Contraseña inicial; el seed guarda únicamente su hash bcrypt.                                                                                                                   |
-| `NODE_ENV`          | No                                      | Está en `.env.example`; el código actual no cambia su comportamiento según esta variable.                                                                                       |
+| Variable         | Requerida                        | Descripción                                                                                                                                                                     |
+| ---------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`           | No                               | Puerto HTTP; por defecto `3000`.                                                                                                                                                |
+| `DATABASE_URL`   | Sí                               | URL PostgreSQL, por ejemplo `postgres://USUARIO:CONTRASENA@localhost:5432/taskboard`. Codificá caracteres especiales de usuario/contraseña como parte de una URL.                |
+| `JWT_SECRET`     | Sí                               | Clave privada para firmar JWT. Usá una cadena aleatoria y larga; no la incluyas en el repositorio.                                                                              |
+| `JWT_EXPIRES_IN` | Sí                               | Duración del token aceptada por `jsonwebtoken`, por ejemplo `1h`.                                                                                                               |
+| `ADMIN_EMAIL`    | Para crear o revertir el seed    | Email de la cuenta administradora inicial.                                                                                                                                      |
+| `ADMIN_PASSWORD` | Para crear el administrador      | Contraseña inicial; el seed guarda únicamente su hash bcrypt.                                                                                                                   |
 
-`npm run db:check` valida solo `DATABASE_URL`; el servidor también necesita `JWT_SECRET` y `JWT_EXPIRES_IN`. Las pruebas requieren `DATABASE_URL_TEST`. Antes de ejecutar `npm test` o `npm run test:coverage`, el proyecto comprueba que la URL de pruebas es independiente y que el nombre termina en `_test`; luego migra esa base y ejecuta la suite. La integración limpia las tablas de prueba entre casos. **Nunca configures `DATABASE_URL_TEST` con la base de desarrollo.**
+`npm run db:check` valida únicamente `DATABASE_URL`; para iniciar el servidor también son necesarias `JWT_SECRET` y `JWT_EXPIRES_IN`.
 
 ## Migraciones y administrador inicial
 
 Las migraciones crean `users` y `tickets`, sus relaciones, índices y los campos requeridos. Aplican únicamente cambios pendientes; no hace falta editar una migración ya aplicada para cambiar el esquema: agregá una migración nueva.
 
-| Comando                        | Efecto                                                          |
-| ------------------------------ | --------------------------------------------------------------- |
-| `npm run db:migrate`           | Aplica migraciones pendientes en `DATABASE_URL`.                |
-| `npm run db:migrate:undo`      | Revierte la última migración aplicada en la base de desarrollo. |
-| `npm run db:test:migrate`      | Aplica migraciones en `DATABASE_URL_TEST`.                      |
-| `npm run db:test:migrate:undo` | Revierte la última migración de la base de pruebas.             |
+| Comando                   | Efecto                                                   |
+| ------------------------- | -------------------------------------------------------- |
+| `npm run db:migrate`      | Aplica migraciones pendientes en `DATABASE_URL`.         |
+| `npm run db:migrate:undo` | Revierte la última migración aplicada en PostgreSQL.     |
 
 El seed de administrador es explícito y no se ejecuta al iniciar la API. Para usarlo, completá `ADMIN_EMAIL` y `ADMIN_PASSWORD`, aplicá primero las migraciones y ejecutá:
 
@@ -118,18 +114,16 @@ El seed normaliza el email a minúsculas, valida su formato, hashea la contrase�
 
 ## Comandos del proyecto
 
-| Comando                                   | Uso                                                                   |
-| ----------------------------------------- | --------------------------------------------------------------------- |
-| `npm run dev`                             | Servidor de desarrollo con recarga.                                   |
-| `npm run build`                           | Compila `src/` en `dist/`.                                            |
-| `npm start`                               | Ejecuta la compilación de producción.                                 |
-| `npm run db:check`                        | Comprueba la conexión de desarrollo.                                  |
-| `npm test`                                | Protege la base de pruebas, aplica migraciones y ejecuta las pruebas. |
-| `npm run test:coverage`                   | Ejecuta las pruebas con cobertura en la base aislada.                 |
-| `npm run lint`                            | Analiza TypeScript y JavaScript con ESLint.                           |
-| `npm run format` / `npm run format:check` | Aplica o verifica el formato con Prettier.                            |
-| `npm run typecheck`                       | Comprueba tipos de código y pruebas sin emitir archivos.              |
-| `npm run check`                           | Ejecuta lint, formato, tipos, build y pruebas.                        |
+| Comando                      | Uso                                                    |
+| ---------------------------- | ------------------------------------------------------ |
+| `npm run dev`                | Inicia el servidor con recarga automática.             |
+| `npm run build`              | Compila `src/` en `dist/`.                             |
+| `npm start`                  | Ejecuta la compilación de producción.                  |
+| `npm run db:check`           | Comprueba la conexión con PostgreSQL.                  |
+| `npm run db:migrate`         | Aplica las migraciones pendientes.                     |
+| `npm run db:migrate:undo`    | Revierte la última migración.                          |
+| `npm run db:seed:admin`      | Crea la cuenta administradora inicial.                 |
+| `npm run db:seed:admin:undo` | Elimina la cuenta creada por el seeder.                |
 
 ## API
 
@@ -143,7 +137,7 @@ El token se obtiene en `POST /api/auth/login`. El registro público siempre asig
 
 ### Flujo básico de uso
 
-1. Configurá `.env`, creá las bases, aplicá migraciones y arrancá la API.
+1. Configurá `.env`, creá la base, aplicá migraciones y arrancá la API.
 2. Creá un usuario con `POST /api/auth/register` o prepará el administrador con el seed.
 3. Iniciá sesión con `POST /api/auth/login` y copiá el JWT de la respuesta.
 4. En Thunder Client, enviá `Authorization: Bearer <token>` para consultar o modificar usuarios y tickets.
@@ -423,22 +417,16 @@ En VS Code está disponible la colección **TaskBoard API**, con solicitudes de 
 | `package.json`                        | Dependencias, versiones de Node compatibles y comandos npm.               |
 | `package-lock.json`                   | Versiones exactas para instalaciones reproducibles con npm.               |
 | `tsconfig.json`                       | Configuración de compilación TypeScript para producción.                  |
-| `tsconfig.test.json`                  | Incluye `src/` y `tests/` en la comprobación de tipos.                    |
 | `.env.example`                        | Plantilla de variables; no contiene credenciales reales.                  |
-| `.gitignore`                          | Excluye `.env`, dependencias, compilación, cobertura y logs.              |
+| `.gitignore`                          | Excluye `.env`, dependencias, compilación y logs.                         |
 | `.sequelizerc`                        | Indica a Sequelize CLI dónde están configuración, migraciones y seeders.  |
 | `README.md`                           | Guía de instalación, arquitectura, uso y contrato de la API.              |
-| `AGENTS.md`                           | Acuerdos de trabajo y comandos del repositorio para asistentes de código. |
-| `eslint.config.mjs`                   | Reglas de análisis estático para JavaScript y TypeScript.                 |
-| `.editorconfig`                       | Convenciones de fin de línea, codificación y sangría.                     |
-| `.prettierrc.json`, `.prettierignore` | Opciones de formato y exclusiones de Prettier.                            |
 
 ### Código de la aplicación: `src/`
 
 ```text
 src/
 ├─ app.ts
-├─ create-application.ts
 ├─ server.ts
 ├─ config/
 │  └─ env.ts
@@ -447,7 +435,6 @@ src/
 │  ├─ ticket-controller.ts
 │  └─ user-controller.ts
 ├─ database/
-│  ├─ assert-test-database.cjs
 │  ├─ check-connection.ts
 │  ├─ sequelize-cli-config.cjs
 │  ├─ sequelize.ts
@@ -500,8 +487,7 @@ src/
 
 | Carpeta/archivo                     | Responsabilidad                                                         |
 | ----------------------------------- | ----------------------------------------------------------------------- |
-| `app.ts`                            | Crea Express, registra `/health`, routers y middlewares.                |
-| `create-application.ts`             | Ensambla autenticación, repositorios, servicios y controladores.        |
+| `app.ts`                            | Crea Express y ensambla rutas, servicios, repositorios y controladores. |
 | `server.ts`                         | Punto de entrada; configuración, conexión y cierre ordenado.            |
 | `config/env.ts`                     | Lee y valida variables de entorno.                                      |
 | `controllers/`                      | Recibe parámetros HTTP, llama servicios y arma respuestas.              |
@@ -510,50 +496,17 @@ src/
 | `repositories/`                     | Acceso a datos mediante los modelos Sequelize.                          |
 | `models/`                           | Esquema y relaciones de `User` y `Ticket`.                              |
 | `database/sequelize.ts`             | Instancia compartida de Sequelize para PostgreSQL.                      |
-| `database/sequelize-cli-config.cjs` | Configuración de conexiones de desarrollo y pruebas para Sequelize CLI. |
+| `database/sequelize-cli-config.cjs` | Configuración de la conexión de desarrollo para Sequelize CLI.         |
 | `database/migrations/`              | Historial incremental de tablas, campos, claves foráneas e índices.     |
 | `database/seeders/`                 | Alta reversible del administrador inicial.                              |
 | `database/check-connection.ts`      | Comando para verificar la conexión local.                               |
-| `database/assert-test-database.cjs` | Impide migrar o probar contra la base de desarrollo.                    |
 | `middleware/` y `errors/`           | Autenticación, errores HTTP y rutas inexistentes.                       |
 | `validation/`                       | Comprueba y normaliza cuerpos y query params.                           |
 | `types/`                            | Roles, estados, prioridades, tipos de ticket y filtros.                 |
 | `utils/`                            | JWT, campos calculados y sugerencias auxiliares.                        |
 
-### Pruebas: `tests/`
-
-```text
-tests/
-├─ app.test.ts
-├─ auth-login.test.ts
-├─ auth-register.test.ts
-├─ authentication.test.ts
-├─ config.test.ts
-├─ database-isolation.test.ts
-├─ error-handler.test.ts
-├─ helpers/ticket-routes.ts
-├─ http-error.test.ts
-├─ jwt.test.ts
-├─ register-user-service.test.ts
-├─ register-user.test.ts
-├─ ticket-deletion.test.ts
-├─ ticket-derived-fields.test.ts
-├─ ticket-model.test.ts
-├─ ticket-queries.test.ts
-├─ ticket-repository.test.ts
-├─ ticket-status.test.ts
-├─ ticket-suggestions.test.ts
-├─ ticket-updates.test.ts
-├─ user-repository.test.ts
-├─ user-role.test.ts
-├─ user-service.test.ts
-└─ users-routes.test.ts
-```
-
-Las pruebas unitarias verifican validaciones, servicios, modelos y utilidades. Las pruebas HTTP revisan rutas y respuestas. `database-isolation.test.ts` integra la aplicación con PostgreSQL usando `DATABASE_URL_TEST` y limpia las tablas de prueba entre casos; `helpers/ticket-routes.ts` comparte el montaje HTTP para los tests de tickets.
-
-`node_modules/`, `dist/` y `coverage/` son directorios generados localmente: no son código fuente ni se versionan.
+`node_modules/` y `dist/` son directorios generados localmente: no son código fuente ni se versionan.
 
 ## Seguridad de dependencias
 
-Antes de una entrega, ejecutá `npm audit` para revisar las vulnerabilidades conocidas de las versiones instaladas. No uses `npm audit fix --force` sin revisar antes el impacto de las actualizaciones incompatibles en Sequelize, TypeScript y las herramientas de desarrollo.
+Antes de una entrega, ejecutá `npm audit` para revisar las vulnerabilidades conocidas de las versiones instaladas. No uses `npm audit fix --force` sin revisar antes el impacto de las actualizaciones incompatibles en Sequelize y TypeScript.

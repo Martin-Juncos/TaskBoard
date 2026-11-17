@@ -1,6 +1,6 @@
+import { createApplication } from "./app";
 import { readConfig } from "./config/env";
 import { sequelize } from "./database/sequelize";
-import { createApplication } from "./create-application";
 
 const config = readConfig();
 

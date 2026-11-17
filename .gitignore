@@ -1,10 +1,8 @@
 # Dependencias
 node_modules/
 
-# Salidas de compilación y pruebas
+# Salida de compilación
 dist/
-coverage/
-.eslintcache
 
 # Variables de entorno y secretos
 .env

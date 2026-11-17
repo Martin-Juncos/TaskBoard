@@ -1,11 +1,48 @@
 import express from "express";
+import type { AppConfig } from "./config/env";
+import {
+  createLoginUserController,
+  createRegisterUserController,
+} from "./controllers/auth-controller";
+import {
+  createCreateTicketController,
+  createDeleteTicketController,
+  createGetTicketController,
+  createListTicketsController,
+  createRegenerateTicketSuggestionsController,
+  createUpdateTicketController,
+  createUpdateTicketStatusController,
+} from "./controllers/ticket-controller";
+import {
+  createChangeUserRoleController,
+  createListUsersController,
+} from "./controllers/user-controller";
+import { createAuthenticationMiddleware } from "./middleware/authentication";
 import errorHandler from "./middleware/error-handler";
 import notFoundHandler from "./middleware/not-found-handler";
+import { Ticket } from "./models/ticket";
+import { User } from "./models/user";
+import { TicketRepository } from "./repositories/ticket-repository";
+import { UserRepository } from "./repositories/user-repository";
 import { createAuthRouter, type AuthRouteHandlers } from "./routes/auth-routes";
-import { createUserRouter, type UserRouteHandlers } from "./routes/user-routes";
 import { createTicketRouter, type TicketRouteHandlers } from "./routes/ticket-routes";
+import { createUserRouter, type UserRouteHandlers } from "./routes/user-routes";
+import { LoginUserService } from "./services/login-user-service";
+import { RegisterUserService } from "./services/register-user-service";
+import {
+  CreateTicketService,
+  DeleteTicketService,
+  GetTicketService,
+  ListTicketsService,
+  RegenerateTicketSuggestionsService,
+  UpdateTicketService,
+  UpdateTicketStatusService,
+} from "./services/ticket-service";
+import { ChangeUserRoleService, ListUsersService } from "./services/user-service";
 
-// Agrupa handlers opcionales para permitir montar aplicaciones parciales en las pruebas.
+type ApplicationConfig = Pick<AppConfig, "jwtSecret" | "jwtExpiresIn">;
+
+// Agrupa los handlers de cada módulo para mantener el armado de Express en un solo lugar.
 export interface AppRouteHandlers extends AuthRouteHandlers {
   users?: UserRouteHandlers;
   tickets?: TicketRouteHandlers;
@@ -23,12 +60,12 @@ export function createApp(authHandlers?: AppRouteHandlers) {
     response.status(200).json({ status: "ok" });
   });
 
-  // Permite montar solo /health en pruebas que no necesitan autenticación.
+  // La autenticación se registra únicamente cuando se proporcionan sus handlers.
   if (authHandlers) {
     app.use("/api/auth", createAuthRouter(authHandlers));
   }
 
-  // Mantiene opcionales los módulos que una composición de prueba no necesita.
+  // Los módulos de usuarios y tickets dependen de sus respectivos handlers.
   if (authHandlers?.users) {
     app.use("/api/users", createUserRouter(authHandlers.users));
   }
@@ -44,4 +81,35 @@ export function createApp(authHandlers?: AppRouteHandlers) {
   app.use(errorHandler);
 
   return app;
+}
+
+// Conecta las capas de la aplicación en un único lugar antes de iniciar el servidor.
+export function createApplication(config: ApplicationConfig) {
+  const userRepository = new UserRepository(User);
+  const ticketRepository = new TicketRepository(Ticket);
+  const authenticate = createAuthenticationMiddleware(userRepository, config);
+
+  return createApp({
+    register: createRegisterUserController(new RegisterUserService(userRepository)),
+    login: createLoginUserController(new LoginUserService(userRepository, config)),
+    users: {
+      authenticate,
+      list: createListUsersController(new ListUsersService(userRepository)),
+      updateRole: createChangeUserRoleController(new ChangeUserRoleService(userRepository)),
+    },
+    tickets: {
+      authenticate,
+      create: createCreateTicketController(new CreateTicketService(ticketRepository)),
+      update: createUpdateTicketController(new UpdateTicketService(ticketRepository)),
+      regenerateSuggestions: createRegenerateTicketSuggestionsController(
+        new RegenerateTicketSuggestionsService(ticketRepository),
+      ),
+      updateStatus: createUpdateTicketStatusController(
+        new UpdateTicketStatusService(ticketRepository),
+      ),
+      delete: createDeleteTicketController(new DeleteTicketService(ticketRepository)),
+      findById: createGetTicketController(new GetTicketService(ticketRepository)),
+      list: createListTicketsController(new ListTicketsService(ticketRepository)),
+    },
+  });
 }

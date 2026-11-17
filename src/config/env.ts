@@ -4,7 +4,6 @@ import "dotenv/config";
 export interface AppConfig {
   port: number;
   databaseUrl: string;
-  databaseUrlTest: string | undefined;
   jwtSecret: string;
   jwtExpiresIn: string;
 }
@@ -36,7 +35,6 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
   return {
     port: Number(environment.PORT) || 3000,
     databaseUrl: readDatabaseUrl(environment),
-    databaseUrlTest: environment.DATABASE_URL_TEST?.trim() || undefined,
     jwtSecret: environment.JWT_SECRET!,
     jwtExpiresIn: environment.JWT_EXPIRES_IN!,
   };
