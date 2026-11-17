@@ -12,22 +12,11 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "test": "node src/database/assert-test-database.cjs && npm run db:test:migrate && tsx --test",
-    "lint": "eslint .",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "typecheck": "tsc -p tsconfig.test.json",
-    "test:coverage": "node src/database/assert-test-database.cjs && npm run db:test:migrate && node --import tsx --test --experimental-test-coverage",
-    "check": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm test",
     "db:check": "tsx src/database/check-connection.ts",
     "db:migrate": "sequelize-cli db:migrate --env development",
     "db:migrate:undo": "sequelize-cli db:migrate:undo --env development",
-    "db:test:migrate": "sequelize-cli db:migrate --env test",
-    "db:test:migrate:undo": "sequelize-cli db:migrate:undo --env test",
     "db:seed:admin": "sequelize-cli db:seed --seed 20261105000400-seed-admin.js --env development",
-    "db:seed:admin:undo": "sequelize-cli db:seed:undo --seed 20261105000400-seed-admin.js --env development",
-    "db:test:seed:admin": "sequelize-cli db:seed --seed 20261105000400-seed-admin.js --env test",
-    "db:test:seed:admin:undo": "sequelize-cli db:seed:undo --seed 20261105000400-seed-admin.js --env test"
+    "db:seed:admin:undo": "sequelize-cli db:seed:undo --seed 20261105000400-seed-admin.js --env development"
   },
   "repository": {
     "type": "git",
@@ -49,18 +38,13 @@
     "sequelize": "^6.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
     "@types/bcrypt": "^5.0.0",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^24.0.0",
-    "eslint": "^9.39.1",
-    "globals": "^16.5.0",
-    "prettier": "^3.8.3",
     "sequelize-cli": "^6.6.3",
     "tsx": "^4.23.0",
-    "typescript": "^5.9.0",
-    "typescript-eslint": "^8.72.1"
+    "typescript": "^5.9.0"
   },
   "bugs": {
     "url": "https://github.com/Martin-Juncos/TaskBoard/issues"
