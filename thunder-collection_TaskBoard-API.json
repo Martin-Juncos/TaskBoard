@@ -1,0 +1,865 @@
+{
+    "clientName": "Thunder Client",
+    "collectionName": "TaskBoard API",
+    "collectionId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+    "dateExported": "2026-11-18T22:04:08.946Z",
+    "version": "1.4",
+    "folders": [
+        {
+            "_id": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "Tickets",
+            "containerId": "",
+            "created": "2026-11-06T11:54:19.586Z",
+            "sortNum": 10000
+        },
+        {
+            "_id": "ab0da9ab-d1ef-4b3c-85b3-8f77ef75ce54",
+            "name": "Usuarios",
+            "containerId": "",
+            "created": "2026-11-06T11:54:19.613Z",
+            "sortNum": 20000
+        },
+        {
+            "_id": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "Errores",
+            "containerId": "",
+            "created": "2026-11-06T11:54:19.675Z",
+            "sortNum": 30000
+        },
+        {
+            "_id": "e7ea1a73-7d53-4504-b957-56ab17ea670f",
+            "name": "Salud",
+            "containerId": "",
+            "created": "2026-11-06T11:54:35.838Z",
+            "sortNum": 40000
+        },
+        {
+            "_id": "e11fcca3-474f-4d02-be7f-1ee58f310f3f",
+            "name": "Autenticación",
+            "containerId": "",
+            "created": "2026-11-06T11:54:45.816Z",
+            "sortNum": 50000
+        }
+    ],
+    "requests": [
+        {
+            "_id": "b486b7cd-d365-4424-a912-2e2ad63daf25",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "e7ea1a73-7d53-4504-b957-56ab17ea670f",
+            "name": "GET /health — servicio disponible",
+            "url": "http://localhost:3000/health",
+            "method": "GET",
+            "sortNum": 10000,
+            "created": "2026-11-06T11:55:04.737Z",
+            "modified": "2026-11-06T11:55:04.737Z",
+            "headers": [],
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Comprueba que la API está disponible. Esperado: 200 y {\"status\":\"ok\"}."
+            ]
+        },
+        {
+            "_id": "3c918138-3894-47c4-b72a-32ae99d12ea3",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "e11fcca3-474f-4d02-be7f-1ee58f310f3f",
+            "name": "POST /api/auth/register — registro exitoso",
+            "url": "http://localhost:3000/api/auth/register",
+            "method": "POST",
+            "sortNum": 20000,
+            "created": "2026-11-06T11:55:17.570Z",
+            "modified": "2026-11-06T11:55:17.570Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"name\": \"Desarrollador de ejemplo\",",
+                    "  \"email\": \"demo.taskboard@example.com\",",
+                    "  \"password\": \"Ejemplo123!\"",
+                    "}"
+                ]
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "201"
+                }
+            ],
+            "docs": [
+                "Crea un usuario developer. Cambiá el email de ejemplo antes de repetir; si ya existe, responde 400."
+            ]
+        },
+        {
+            "_id": "90080a51-858a-4e04-be1a-1dc1eee040fa",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "e11fcca3-474f-4d02-be7f-1ee58f310f3f",
+            "name": "POST /api/auth/login — developer",
+            "url": "http://localhost:3000/api/auth/login",
+            "method": "POST",
+            "sortNum": 30000,
+            "created": "2026-11-06T11:56:41.336Z",
+            "modified": "2026-11-06T11:56:41.336Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"email\": \"{{emailDeveloper}}\",",
+                    "  \"password\": \"{{passwordDeveloper}}\"",
+                    "}"
+                ]
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                },
+                {
+                    "type": "set-env-var",
+                    "custom": "json.token",
+                    "action": "setto",
+                    "value": "{{tokenDeveloper}}"
+                }
+            ],
+            "docs": [
+                "Ingresá con un developer registrado; el test guarda tokenDeveloper en el entorno activo."
+            ]
+        },
+        {
+            "_id": "9bff6612-ebc5-414f-90b4-ad655e734c03",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "e11fcca3-474f-4d02-be7f-1ee58f310f3f",
+            "name": "POST /api/auth/login — admin",
+            "url": "http://localhost:3000/api/auth/login",
+            "method": "POST",
+            "sortNum": 40000,
+            "created": "2026-11-06T11:56:45.309Z",
+            "modified": "2026-11-06T11:56:45.309Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"email\": \"{{emailAdmin}}\",",
+                    "  \"password\": \"{{passwordAdmin}}\"",
+                    "}"
+                ]
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                },
+                {
+                    "type": "set-env-var",
+                    "custom": "json.token",
+                    "action": "setto",
+                    "value": "{{tokenAdmin}}"
+                }
+            ],
+            "docs": [
+                "Ingresá con el administrador del seed; el test guarda tokenAdmin."
+            ]
+        },
+        {
+            "_id": "af33d8fc-593e-48d8-86cb-6312e8dd670c",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "ab0da9ab-d1ef-4b3c-85b3-8f77ef75ce54",
+            "name": "GET /api/users — listar",
+            "url": "http://localhost:3000/api/users",
+            "method": "GET",
+            "sortNum": 50000,
+            "created": "2026-11-06T11:56:49.708Z",
+            "modified": "2026-11-06T11:56:49.708Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Lista usuarios sin exponer hashes."
+            ]
+        },
+        {
+            "_id": "f10fe09b-1744-4cc8-aa0f-73511349d619",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "ab0da9ab-d1ef-4b3c-85b3-8f77ef75ce54",
+            "name": "PATCH /api/users/:id/role — cambiar rol",
+            "url": "http://localhost:3000/api/users/{{userId}}/role",
+            "method": "PATCH",
+            "sortNum": 60000,
+            "created": "2026-11-06T11:56:53.559Z",
+            "modified": "2026-11-06T11:56:53.559Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"role\": \"developer\"",
+                    "}"
+                ]
+            },
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenAdmin}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Solo admin. userId identifica al usuario de prueba cuyo rol quedará en developer."
+            ]
+        },
+        {
+            "_id": "73e322fd-ef10-4c17-b6c8-b14146f787ec",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "POST /api/tickets — crear",
+            "url": "http://localhost:3000/api/tickets",
+            "method": "POST",
+            "sortNum": 70000,
+            "created": "2026-11-06T11:57:20.657Z",
+            "modified": "2026-11-06T11:57:20.657Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"title\": \"Agregar ejemplo a TaskBoard\",",
+                    "  \"description\": \"Ticket de ejemplo para Thunder Client\",",
+                    "  \"type\": \"feature\",",
+                    "  \"priority\": \"high\",",
+                    "  \"status\": \"pending\",",
+                    "  \"dueDate\": \"2027-12-31\",",
+                    "  \"assigneeId\": null",
+                    "}"
+                ]
+            },
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "201"
+                },
+                {
+                    "type": "set-env-var",
+                    "custom": "json.id",
+                    "action": "setto",
+                    "value": "{{ticketId}}"
+                }
+            ],
+            "docs": [
+                "Crea un ticket; guardá su id en ticketId. Modifica la base de datos."
+            ]
+        },
+        {
+            "_id": "e8a27c43-8090-4594-b658-9ea98ad4065a",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "GET /api/tickets — listar",
+            "url": "http://localhost:3000/api/tickets",
+            "method": "GET",
+            "sortNum": 80000,
+            "created": "2026-11-06T11:57:24.685Z",
+            "modified": "2026-11-06T11:57:24.685Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Lista todos los tickets visibles."
+            ]
+        },
+        {
+            "_id": "06de89c8-e01c-47a2-8a5a-307560304394",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "GET /api/tickets — filtrar",
+            "url": "http://localhost:3000/api/tickets?status=pending&priority=high&type=feature",
+            "method": "GET",
+            "sortNum": 90000,
+            "created": "2026-11-06T11:57:28.472Z",
+            "modified": "2026-11-06T11:57:28.472Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Ejemplo de filtros combinados."
+            ],
+            "params": [
+                {
+                    "name": "status",
+                    "value": "pending"
+                },
+                {
+                    "name": "priority",
+                    "value": "high"
+                },
+                {
+                    "name": "type",
+                    "value": "feature"
+                }
+            ]
+        },
+        {
+            "_id": "67648bde-094d-4d44-b498-3e186ce9948c",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "GET /api/tickets — mis tickets",
+            "url": "http://localhost:3000/api/tickets?mine=true",
+            "method": "GET",
+            "sortNum": 100000,
+            "created": "2026-11-06T11:57:32.200Z",
+            "modified": "2026-11-06T11:57:32.200Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Filtra por tickets del usuario autenticado."
+            ],
+            "params": [
+                {
+                    "name": "mine",
+                    "value": "true"
+                }
+            ]
+        },
+        {
+            "_id": "de29867f-be03-43e8-b358-53948d5b1c82",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "GET /api/tickets — agrupar",
+            "url": "http://localhost:3000/api/tickets?groupBy=status",
+            "method": "GET",
+            "sortNum": 110000,
+            "created": "2026-11-06T11:57:35.786Z",
+            "modified": "2026-11-06T11:57:35.786Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Agrupa el listado por estado."
+            ],
+            "params": [
+                {
+                    "name": "groupBy",
+                    "value": "status"
+                }
+            ]
+        },
+        {
+            "_id": "ed326417-d388-4b25-baf0-7e9260aa4fe2",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "GET /api/tickets/:id — consultar",
+            "url": "http://localhost:3000/api/tickets/{{ticketId}}",
+            "method": "GET",
+            "sortNum": 120000,
+            "created": "2026-11-06T11:57:41.440Z",
+            "modified": "2026-11-06T11:57:41.440Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Consulta el ticket guardado en ticketId."
+            ]
+        },
+        {
+            "_id": "81daa6a1-2e6f-43cb-a188-c2b8749a61bb",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "PUT /api/tickets/:id — editar",
+            "url": "http://localhost:3000/api/tickets/{{ticketId}}",
+            "method": "PUT",
+            "sortNum": 130000,
+            "created": "2026-11-06T11:57:45.133Z",
+            "modified": "2026-11-06T11:57:45.133Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"title\": \"Ejemplo actualizado de TaskBoard\"",
+                    "}"
+                ]
+            },
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "El developer puede editar tickets propios o asignados. Cambiar el título no regenera sugerencias."
+            ]
+        },
+        {
+            "_id": "cdb0d86a-1d5b-4cf5-b289-b6bc48bbb0d8",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "POST /api/tickets/:id/regenerate-suggestions",
+            "url": "http://localhost:3000/api/tickets/{{ticketId}}/regenerate-suggestions",
+            "method": "POST",
+            "sortNum": 140000,
+            "created": "2026-11-06T11:57:48.910Z",
+            "modified": "2026-11-06T11:57:48.910Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Regenera explícitamente rama y commit sugeridos."
+            ]
+        },
+        {
+            "_id": "d161f0a0-16ba-416c-8011-5c32fadef653",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "PATCH /api/tickets/:id/status — avanzar",
+            "url": "http://localhost:3000/api/tickets/{{ticketId}}/status",
+            "method": "PATCH",
+            "sortNum": 150000,
+            "created": "2026-11-06T11:57:52.785Z",
+            "modified": "2026-11-06T11:57:52.785Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"status\": \"in_progress\"",
+                    "}"
+                ]
+            },
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "El developer puede tomar un ticket libre; si ya está asignado, solo el responsable o admin cambia su estado."
+            ]
+        },
+        {
+            "_id": "ee77093f-0fa9-4ebf-882b-03e70a62d9d3",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "6fc96ba7-3f65-4fb4-afb6-0c6479790685",
+            "name": "DELETE /api/tickets/:id — eliminar",
+            "url": "http://localhost:3000/api/tickets/{{ticketId}}",
+            "method": "DELETE",
+            "sortNum": 160000,
+            "created": "2026-11-06T11:57:56.943Z",
+            "modified": "2026-11-06T11:57:56.943Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenAdmin}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "200"
+                }
+            ],
+            "docs": [
+                "Solo admin. Ejecutá esta solicitud al final: elimina el ticket."
+            ]
+        },
+        {
+            "_id": "aaf837a3-ec6d-4a81-84dc-f25b8ba7c2f1",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "400 — registro sin datos",
+            "url": "http://localhost:3000/api/auth/register",
+            "method": "POST",
+            "sortNum": 170000,
+            "created": "2026-11-06T11:58:18.967Z",
+            "modified": "2026-11-06T11:58:18.967Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{}"
+                ]
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "400"
+                }
+            ],
+            "docs": [
+                "Faltan name, email y password: VALIDACION_REGISTRO."
+            ]
+        },
+        {
+            "_id": "5eda0d1a-8d49-46a0-95c3-d4f092d43e9e",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "401 — login incorrecto",
+            "url": "http://localhost:3000/api/auth/login",
+            "method": "POST",
+            "sortNum": 180000,
+            "created": "2026-11-06T11:58:22.461Z",
+            "modified": "2026-11-06T11:58:22.461Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"email\": \"{{emailDeveloper}}\",",
+                    "  \"password\": \"contrasena-incorrecta\"",
+                    "}"
+                ]
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "401"
+                }
+            ],
+            "docs": [
+                "Credenciales incorrectas: CREDENCIALES_INVALIDAS."
+            ]
+        },
+        {
+            "_id": "2fe3fc8b-aff9-4f8b-961b-ff45245a13c5",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "401 — tickets sin token",
+            "url": "http://localhost:3000/api/tickets",
+            "method": "GET",
+            "sortNum": 190000,
+            "created": "2026-11-06T11:58:26.231Z",
+            "modified": "2026-11-06T11:58:26.231Z",
+            "headers": [],
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "401"
+                }
+            ],
+            "docs": [
+                "Falta Authorization: Bearer; respuesta TOKEN_REQUERIDO."
+            ]
+        },
+        {
+            "_id": "ae705346-cf15-43f6-8160-bc0b73fc7fe2",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "400 — ticket inválido",
+            "url": "http://localhost:3000/api/tickets",
+            "method": "POST",
+            "sortNum": 200000,
+            "created": "2026-11-06T11:58:30.247Z",
+            "modified": "2026-11-06T11:58:30.247Z",
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": {
+                "type": "json",
+                "raw": [
+                    "{",
+                    "  \"title\": \"\",",
+                    "  \"type\": \"feature\",",
+                    "  \"priority\": \"high\",",
+                    "  \"status\": \"pending\",",
+                    "  \"dueDate\": \"2027-12-31\"",
+                    "}"
+                ]
+            },
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "400"
+                }
+            ],
+            "docs": [
+                "Título vacío: VALIDACION_TICKET."
+            ]
+        },
+        {
+            "_id": "7e4ecb7d-7a39-4247-9160-537b5cf476c4",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "400 — filtro inválido",
+            "url": "http://localhost:3000/api/tickets?priority=extrema",
+            "method": "GET",
+            "sortNum": 210000,
+            "created": "2026-11-06T11:58:34.350Z",
+            "modified": "2026-11-06T11:58:34.350Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "400"
+                }
+            ],
+            "docs": [
+                "Prioridad desconocida: FILTRO_INVALIDO."
+            ],
+            "params": [
+                {
+                    "name": "priority",
+                    "value": "extrema"
+                }
+            ]
+        },
+        {
+            "_id": "1c1644f7-bcf4-4426-be4d-817746635949",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "403 — developer no elimina",
+            "url": "http://localhost:3000/api/tickets/{{ticketId}}",
+            "method": "DELETE",
+            "sortNum": 220000,
+            "created": "2026-11-06T11:58:38.298Z",
+            "modified": "2026-11-06T11:58:38.298Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "403"
+                }
+            ],
+            "docs": [
+                "Un developer no puede eliminar tickets, aunque sea su autor."
+            ]
+        },
+        {
+            "_id": "52141212-dc69-4a02-ad59-096c68c349e8",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "404 — ticket inexistente",
+            "url": "http://localhost:3000/api/tickets/999999999",
+            "method": "GET",
+            "sortNum": 230000,
+            "created": "2026-11-06T11:58:42.068Z",
+            "modified": "2026-11-06T11:58:42.068Z",
+            "headers": [],
+            "auth": {
+                "type": "bearer",
+                "bearer": "{{tokenDeveloper}}"
+            },
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "404"
+                }
+            ],
+            "docs": [
+                "ID válido pero inexistente: TICKET_NO_ENCONTRADO."
+            ]
+        },
+        {
+            "_id": "dbdc48b7-19c9-42d8-bbdf-c53a49bbca03",
+            "colId": "670ab262-d228-4a31-9f21-2abfad8b68a9",
+            "containerId": "c5dc848d-bd0e-459e-812f-a41250642e34",
+            "name": "404 — ruta inexistente",
+            "url": "http://localhost:3000/api/ruta-inexistente",
+            "method": "GET",
+            "sortNum": 240000,
+            "created": "2026-11-06T11:58:46.164Z",
+            "modified": "2026-11-06T11:58:46.164Z",
+            "headers": [],
+            "tests": [
+                {
+                    "type": "res-code",
+                    "custom": "",
+                    "action": "equal",
+                    "value": "404"
+                }
+            ],
+            "docs": [
+                "Ruta no registrada; respuesta JSON uniforme."
+            ]
+        }
+    ],
+    "settings": {
+        "docs": [
+            "# TaskBoard API",
+            "Ejemplos para http://localhost:3000 (puerto predeterminado). Iniciá el servidor y prepará la base antes de usarlos.",
+            "En Thunder Client → Environments, creá y activá un entorno con emailDeveloper, passwordDeveloper, emailAdmin, passwordAdmin, tokenDeveloper, tokenAdmin, ticketId y userId. No guardes valores reales en la colección ni en Git.",
+            "Ejecutá login developer/admin para capturar tokens y crear ticket para capturar ticketId. Elegí userId desde GET /api/users.",
+            "Ejecutá las solicitudes individualmente; registro, cambios de rol, creación, edición y eliminación modifican datos. No uses una base de producción."
+        ]
+    },
+    "ref": "nJ9L4K3jAWFpIDsQRllWBebPMuJ4Syz6MltE-diusdXzIwmj_Axq6Ei04Cf4HPySsLvsyygZotU0XGXfpyDopA"
+}

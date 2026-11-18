@@ -406,7 +406,9 @@ Requiere autenticación, ID válido y rol administrador. No lleva cuerpo.
 
 ## Pruebas con Thunder Client
 
-En VS Code está disponible la colección **TaskBoard API**, con solicitudes de éxito y error agrupadas en **Salud**, **Autenticación**, **Usuarios**, **Tickets** y **Errores**. Configurá en Thunder Client una URL base y un entorno local con los datos de prueba. No guardes claves reales en la colección. La colección se administra desde Thunder Client y no está exportada como archivo de este repositorio.
+La colección **TaskBoard API** está exportada en [`thunder-collection_TaskBoard-API.json`](./thunder-collection_TaskBoard-API.json). Incluye 24 solicitudes de éxito y error agrupadas en **Salud**, **Autenticación**, **Usuarios**, **Tickets** y **Errores**, con ejemplos de respuestas `400`, `401`, `403` y `404`.
+
+Para usarla, abrí Thunder Client en VS Code, elegí **Collections → Import** y seleccioná el archivo exportado. Después configurá las variables indicadas por la colección con datos locales de prueba. Los tokens y contraseñas reutilizables se mantienen como variables; el archivo no contiene JWT, secretos de entorno ni credenciales reales.
 
 ## Carpetas y archivos
 
@@ -421,6 +423,7 @@ En VS Code está disponible la colección **TaskBoard API**, con solicitudes de 
 | `.gitignore`                          | Excluye `.env`, dependencias, compilación y logs.                         |
 | `.sequelizerc`                        | Indica a Sequelize CLI dónde están configuración, migraciones y seeders.  |
 | `README.md`                           | Guía de instalación, arquitectura, uso y contrato de la API.              |
+| `thunder-collection_TaskBoard-API.json` | Colección importable con la evidencia funcional de Thunder Client.      |
 
 ### Código de la aplicación: `src/`
 
